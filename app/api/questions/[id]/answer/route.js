@@ -3,6 +3,7 @@ import { requireTeam } from '@/lib/session';
 import prisma from '@/lib/prisma';
 import { emitToAll, getLiveState, updateLiveState } from '@/lib/socket-emitter';
 import { runTestCases } from '@/lib/execute-code';
+import { isContestClosedForSubmit } from '@/lib/settings';
 
 export async function POST(request, { params }) {
   const session = await requireTeam();
@@ -10,6 +11,10 @@ export async function POST(request, { params }) {
 
   const team = await prisma.team.findUnique({ where: { id: session.teamId } });
   if (!team || team.isBanned) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+
+  if (await isContestClosedForSubmit()) {
+    return NextResponse.json({ error: 'Contest has ended. Submissions are closed.' }, { status: 403 });
+  }
 
   const body = await request.json();
   const qid = parseInt(params.id);

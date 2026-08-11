@@ -1,7 +1,13 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
+import { SETTING_DEFAULTS, asBool, getSettingsMap } from '@/lib/settings';
 
 export async function GET() {
-  const setting = await prisma.setting.findUnique({ where: { key: 'contest_end_time' } });
-  return NextResponse.json({ contestEndTime: setting?.value ?? null });
+  const map = await getSettingsMap();
+  return NextResponse.json({
+    contestEndTime: map.contest_end_time || null,
+    contestStartTime: map.contest_start_time || null,
+    arenaTagline: map.arena_tagline || SETTING_DEFAULTS.arena_tagline,
+    loginBanner: map.login_banner || '',
+    teamLoginEnabled: asBool(map.team_login_enabled, true),
+  });
 }

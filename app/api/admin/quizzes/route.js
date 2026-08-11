@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/session';
 import prisma from '@/lib/prisma';
+import { getSetting } from '@/lib/settings';
 
 export async function GET() {
   const session = await requireAdmin();
@@ -31,11 +32,13 @@ export async function POST(request) {
   const { title, description, pointsPerQuestion, timeLimitSeconds } = await request.json();
   if (!title?.trim()) return NextResponse.json({ error: 'Title required' }, { status: 400 });
 
+  const defaultPoints = parseInt(await getSetting('points_per_question', '10')) || 10;
+
   const quiz = await prisma.quiz.create({
     data: {
       title: title.trim(),
       description: description?.trim() || null,
-      pointsPerQuestion: parseInt(pointsPerQuestion) || 10,
+      pointsPerQuestion: parseInt(pointsPerQuestion) || defaultPoints,
       timeLimitSeconds: timeLimitSeconds ? parseInt(timeLimitSeconds) : null,
     },
   });
