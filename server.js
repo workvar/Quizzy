@@ -3,6 +3,13 @@ const { parse } = require('url');
 const next = require('next');
 const { Server } = require('socket.io');
 
+// Load .env* before reading PORT / NODE_ENV (custom server does not auto-load them).
+// Resolve via next so pnpm's strict node_modules layout still finds @next/env.
+const { loadEnvConfig } = require(
+  require.resolve('@next/env', { paths: [require.resolve('next/package.json')] })
+);
+loadEnvConfig(process.cwd());
+
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = process.env.HOSTNAME || 'localhost';
 const port = parseInt(process.env.PORT || '3000', 10);

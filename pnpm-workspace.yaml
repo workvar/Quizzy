@@ -1,0 +1,8 @@
+# pnpm 10+ reads settings here (not package.json#pnpm).
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - prisma
+
+# Keep lifecycle scripts (e.g. prisma generate via postinstall).
+enablePrePostScripts: true
