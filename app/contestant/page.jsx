@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Countdown from '@/components/Countdown';
 import NotificationBanner from '@/components/NotificationBanner';
+import AppHeader from '@/components/AppHeader';
 
 function QuestionCard({ q, index }) {
   const status = q.answered ? (q.isCorrect ? 'correct' : 'wrong') : 'pending';
@@ -152,31 +153,31 @@ export default function ContestantHome() {
     <>
       <NotificationBanner />
       <MessageToast messages={messages} onDismiss={id => setMessages(prev => prev.filter(m => m.id !== id))} />
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-apple-gray-2 sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
-          <span className="text-lg font-bold text-apple-text tracking-tight">Quizzy</span>
-          <div className="flex items-center gap-3">
-            {me && <span className="text-sm text-apple-text-2 hidden sm:block">{me.teamName}</span>}
+      <AppHeader
+        href="/contestant"
+        maxWidthClass="max-w-5xl"
+        right={
+          <>
+            {me && <span className="text-sm text-brand-ink-2 hidden sm:block font-medium">{me.teamName}</span>}
             {endTime && <Countdown endTime={endTime} />}
-            <button onClick={logout} className="text-sm text-apple-text-2 hover:text-apple-blue transition-colors font-medium">Sign Out</button>
-          </div>
-        </div>
-      </header>
+            <button onClick={logout} className="text-sm text-brand-ink-2 hover:text-brand-orange transition-colors font-medium">Sign Out</button>
+          </>
+        }
+      />
 
       <main className="max-w-5xl mx-auto px-5 py-8">
         {/* Stats bar */}
         <div className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-apple-text tracking-tight">Questions</h1>
-            {!loading && <p className="text-sm text-apple-text-2 mt-0.5">{answered}/{questions.length} answered · {correct} correct</p>}
+            <h1 className="font-display text-2xl font-bold text-brand-ink tracking-tight">Questions</h1>
+            {!loading && <p className="text-sm text-brand-ink-2 mt-0.5">{answered}/{questions.length} answered · {correct} correct</p>}
           </div>
           <div className="flex items-center gap-3">
-            <div className="bg-white border border-apple-gray-2 rounded-apple px-4 py-2 shadow-apple-sm">
-              <p className="text-xs text-apple-text-3 font-semibold uppercase tracking-wide">Score</p>
-              <p className="text-xl font-bold font-mono text-apple-blue">{totalScore}</p>
+            <div className="bg-white border border-brand-line rounded-apple px-4 py-2 shadow-apple-sm">
+              <p className="text-xs text-brand-ink-3 font-semibold uppercase tracking-wide">Score</p>
+              <p className="text-xl font-bold font-mono text-brand-orange">{totalScore}</p>
             </div>
-            <button onClick={loadQuestions} className="p-2 text-apple-text-3 hover:text-apple-blue transition-colors" title="Refresh">
+            <button onClick={loadQuestions} className="p-2 text-brand-ink-3 hover:text-brand-orange transition-colors" title="Refresh">
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
             </button>
           </div>
@@ -188,9 +189,11 @@ export default function ContestantHome() {
           </div>
         ) : questions.length === 0 ? (
           <div className="text-center py-24">
-            <div className="text-6xl mb-4">🔒</div>
-            <h3 className="text-lg font-semibold text-apple-text mb-2">No questions yet</h3>
-            <p className="text-sm text-apple-text-2">Questions will appear here when released by the admin.</p>
+            <div className="w-14 h-14 mx-auto mb-4 rounded-apple-xl bg-brand-mist border border-orange-200/70 flex items-center justify-center text-brand-orange">
+              <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <h3 className="font-display text-lg font-semibold text-brand-ink mb-2">No questions yet</h3>
+            <p className="text-sm text-brand-ink-2">Questions will appear here when released by the admin.</p>
           </div>
         ) : questionGroups ? (
           <div className="space-y-8">

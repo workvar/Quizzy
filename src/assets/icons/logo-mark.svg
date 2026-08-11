@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Quizzy">
+  <defs>
+    <linearGradient id="qz-g" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF8A4C"/>
+      <stop offset="0.55" stop-color="#F26207"/>
+      <stop offset="1" stop-color="#E24A0F"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#qz-g)"/>
+  <path d="M32 14c-9.94 0-18 8.06-18 18 0 7.2 4.23 13.42 10.35 16.3L21.2 54.4c-.55.95.14 2.15 1.24 2.15h9.52c.45 0 .87-.24 1.1-.63L38.3 47.5A17.9 17.9 0 0 0 50 32c0-9.94-8.06-18-18-18Zm0 8.5a9.5 9.5 0 1 1 0 19 9.5 9.5 0 0 1 0-19Z" fill="#fff"/>
+  <circle cx="32" cy="32" r="4.25" fill="#fff" fill-opacity="0.92"/>
+</svg>

@@ -81,7 +81,7 @@ export function DialogProvider({ children }) {
   }, [dialog, close]);
 
   const toneClass = dialog?.tone === 'primary'
-    ? 'bg-apple-blue hover:bg-blue-600'
+    ? 'bg-apple-blue hover:bg-brand-orange-deep'
     : 'bg-apple-red hover:bg-red-600';
 
   return (

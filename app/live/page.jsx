@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import { LogoMark } from '@/components/Logo';
 
 function renderMd(text) {
   if (!text) return '';
@@ -194,13 +195,17 @@ export default function LiveScreen() {
   const totalTeams = (allTeams || []).length;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white flex flex-col overflow-hidden" style={{ fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif' }}>
+    <div className="min-h-screen bg-[#0E1014] text-white flex flex-col overflow-hidden font-sans">
       {/* Header */}
-      <header className="flex items-center justify-between px-8 py-3 border-b border-white/10 flex-shrink-0 relative" style={{ background: 'rgba(255,255,255,0.03)', backdropFilter: 'blur(20px)' }}>
-        <div className="flex items-center gap-4">
-          <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-            {activeQuizTitle || 'Quizzy Live'}
-          </span>
+      <header className="flex items-center justify-between px-6 sm:px-8 py-3 border-b border-white/10 flex-shrink-0 relative bg-white/[0.03] backdrop-blur-xl">
+        <div className="flex items-center gap-3 min-w-0">
+          <LogoMark size={28} />
+          <div className="min-w-0">
+            <p className="font-display text-lg sm:text-xl font-bold tracking-tight text-white truncate">
+              {activeQuizTitle || 'Quizzy Live'}
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.18em] text-white/35 font-semibold">Live Arena</p>
+          </div>
         </div>
 
         {/* Large center timer */}
@@ -208,10 +213,10 @@ export default function LiveScreen() {
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
             {(() => {
               const pct = currentQuestion.timeLimitSeconds > 0 ? timeLeft / currentQuestion.timeLimitSeconds : 0;
-              const color = pct > 0.5 ? '#34C759' : pct > 0.25 ? '#FF9500' : '#FF3B30';
+              const color = pct > 0.5 ? '#22C55E' : pct > 0.25 ? '#F59E0B' : '#EF4444';
               return (
                 <>
-                  <span className="text-5xl font-black tabular-nums" style={{ color, textShadow: pct < 0.25 ? `0 0 30px ${color}60` : 'none', transition: 'color 0.3s, text-shadow 0.3s' }}>{timeLeft}</span>
+                  <span className="text-5xl font-black tabular-nums font-display" style={{ color, textShadow: pct < 0.25 ? `0 0 30px ${color}60` : 'none', transition: 'color 0.3s, text-shadow 0.3s' }}>{timeLeft}</span>
                   <span className="text-xs font-semibold uppercase tracking-widest text-white/30 mt-0.5">{timeLeft === 0 ? "Time's Up" : 'seconds'}</span>
                 </>
               );
@@ -246,11 +251,11 @@ export default function LiveScreen() {
             <div className="flex-1 flex flex-col px-10 py-8 overflow-y-auto">
               <div className="mb-4 flex items-center gap-3">
                 {currentQuestion.sectionName && (
-                  <span className="text-xs font-bold text-purple-400 uppercase tracking-widest bg-purple-400/10 border border-purple-400/20 px-3 py-1 rounded-full">
+                  <span className="text-xs font-bold text-orange-300 uppercase tracking-widest bg-orange-400/10 border border-orange-400/20 px-3 py-1 rounded-md">
                     {currentQuestion.sectionName}
                   </span>
                 )}
-                <span className={`text-sm font-bold uppercase tracking-widest ${currentQuestion.type === 'CODING' ? 'text-blue-400' : 'text-cyan-400'}`}>
+                <span className={`text-sm font-bold uppercase tracking-widest ${currentQuestion.type === 'CODING' ? 'text-orange-300' : 'text-orange-200/80'}`}>
                   {currentQuestion.type === 'CODING' ? 'Coding Challenge' : currentQuestion.isMultiAnswer ? 'Select all that apply' : 'Choose one answer'}
                 </span>
               </div>

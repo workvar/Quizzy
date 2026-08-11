@@ -5,6 +5,7 @@ import Countdown from '@/components/Countdown';
 import NotificationBanner from '@/components/NotificationBanner';
 import AnswerChart from '@/components/AnswerChart';
 import CodeEditor from '@/components/CodeEditor';
+import AppHeader from '@/components/AppHeader';
 
 function renderMd(text) {
   if (typeof window === 'undefined') return text;
@@ -236,7 +237,7 @@ function CodingQuestion({ question, qid, result, onResult, timeLeft, isSubmitted
           <button
             onClick={submit}
             disabled={!code.trim() || submitting || timeLeft === 0}
-            className="flex items-center gap-2 bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-blue-600 active:bg-blue-700 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-brand-orange-deep active:bg-blue-700 transition-colors disabled:opacity-50"
           >
             {submitting ? (
               <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>Submitting…</>
@@ -457,12 +458,12 @@ function QuestionContent() {
               {/* Submit / Nav */}
               <div className="flex items-center gap-3 flex-wrap">
                 {!isSubmitted && (
-                  <button onClick={() => submitMCQ()} disabled={!selected.length || submitting || timeLeft === 0} className="bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-blue-600 active:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2">
+                  <button onClick={() => submitMCQ()} disabled={!selected.length || submitting || timeLeft === 0} className="bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-brand-orange-deep active:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2">
                     {submitting ? (<><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>Submitting…</>) : 'Submit Answer'}
                   </button>
                 )}
                 {question?.prevId && (<a href={`/contestant/question?id=${question.prevId}`} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-4 py-2.5 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors shadow-apple-sm"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>Previous</a>)}
-                {question?.nextId && (<a href={`/contestant/question?id=${question.nextId}`} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2.5 rounded-apple hover:bg-blue-600 transition-colors shadow-apple-sm ml-auto">Next Question<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg></a>)}
+                {question?.nextId && (<a href={`/contestant/question?id=${question.nextId}`} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2.5 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm ml-auto">Next Question<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg></a>)}
               </div>
             </div>
 
@@ -481,7 +482,7 @@ function QuestionContent() {
         {isCoding && (
           <div className="flex items-center gap-3 flex-wrap">
             {question?.prevId && (<a href={`/contestant/question?id=${question.prevId}`} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-4 py-2.5 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors shadow-apple-sm"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>Previous</a>)}
-            {question?.nextId && (<a href={`/contestant/question?id=${question.nextId}`} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2.5 rounded-apple hover:bg-blue-600 transition-colors shadow-apple-sm ml-auto">Next Question<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg></a>)}
+            {question?.nextId && (<a href={`/contestant/question?id=${question.nextId}`} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2.5 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm ml-auto">Next Question<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg></a>)}
           </div>
         )}
       </div>
@@ -551,22 +552,23 @@ export default function QuestionPage() {
     <>
       <NotificationBanner />
       <MessageToast messages={messages} onDismiss={id => setMessages(prev => prev.filter(m => m.id !== id))} />
-      <header className="bg-white/80 backdrop-blur-xl border-b border-white/40 sticky top-0 z-40 shadow-sm">
-        <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
-          <a href="/contestant" className="text-lg font-bold text-apple-text tracking-tight hover:text-apple-blue transition-colors">Quizzy</a>
-          <div className="flex items-center gap-3">
+      <AppHeader
+        href="/contestant"
+        maxWidthClass="max-w-5xl"
+        right={
+          <>
             {endTime && <Countdown endTime={endTime} />}
-            <button onClick={logout} className="text-sm text-apple-text-2 hover:text-apple-blue transition-colors font-medium">Sign Out</button>
+            <button onClick={logout} className="text-sm text-brand-ink-2 hover:text-brand-orange transition-colors font-medium">Sign Out</button>
             {me && <Avatar name={me.teamName} size={8} />}
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
       <style>{`
         @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
         @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
       `}</style>
-      <Suspense fallback={<div className="flex justify-center py-24"><svg className="animate-spin h-8 w-8 text-apple-blue" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg></div>}>
+      <Suspense fallback={<div className="flex justify-center py-24"><svg className="animate-spin h-8 w-8 text-brand-orange" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg></div>}>
         <QuestionContent />
       </Suspense>
     </>

@@ -5,6 +5,8 @@ import AnswerChart from '@/components/AnswerChart';
 import CodeEditor from '@/components/CodeEditor';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useConfirm } from '@/components/DialogProvider';
+import { LogoMark } from '@/components/Logo';
+import AppHeader from '@/components/AppHeader';
 
 /* ─── Markdown renderer ─── */
 function renderMd(text) {
@@ -313,7 +315,7 @@ function AddQuestionModal({ quizId, sections, onClose, onAdded }) {
 
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
             {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Question'}
           </button>
         </div>
@@ -409,7 +411,7 @@ function UploadQuestionsModal({ quizId, onClose, onUploaded }) {
               <p className="text-base font-bold text-apple-text">Import Complete</p>
               <p className="text-sm text-apple-text-2 mt-1">{result.created} question{result.created !== 1 ? 's' : ''} imported successfully</p>
             </div>
-            <button onClick={onClose} className="px-6 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors">Done</button>
+            <button onClick={onClose} className="px-6 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors">Done</button>
           </div>
         ) : (
           <>
@@ -434,7 +436,7 @@ function UploadQuestionsModal({ quizId, onClose, onUploaded }) {
 
             <div className="flex justify-end gap-3 pt-1">
               <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-              <button onClick={upload} disabled={!file || uploading} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+              <button onClick={upload} disabled={!file || uploading} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
                 {uploading ? <><Spinner size={4} />Importing…</> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>Import Questions</>}
               </button>
             </div>
@@ -503,7 +505,7 @@ function CreateQuizModal({ onClose, onCreated }) {
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
             {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Quiz'}
           </button>
         </div>
@@ -719,7 +721,7 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
                     <input autoFocus value={renamingValue} onChange={e => setRenamingValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') renameSection(s.id); if (e.key === 'Escape') setRenamingId(null); }} className="w-full text-sm px-2 py-1.5 border border-apple-gray-3 rounded-apple focus:outline-none focus:ring-2 focus:ring-apple-blue" placeholder="Section name" />
                     <div className="flex items-center gap-2">
                       <input type="number" value={timeLimitValue} onChange={e => setTimeLimitValue(e.target.value)} min="5" max="600" placeholder="Time limit (sec, optional)" className="flex-1 text-xs px-2 py-1.5 border border-apple-gray-3 rounded-apple focus:outline-none focus:ring-1 focus:ring-apple-blue" />
-                      <button onClick={() => renameSection(s.id)} disabled={busy[s.id]} className="text-xs font-semibold text-white bg-apple-blue px-3 py-1.5 rounded-apple hover:bg-blue-600 transition-colors">Save</button>
+                      <button onClick={() => renameSection(s.id)} disabled={busy[s.id]} className="text-xs font-semibold text-white bg-apple-blue px-3 py-1.5 rounded-apple hover:bg-brand-orange-deep transition-colors">Save</button>
                       <button onClick={() => setRenamingId(null)} className="text-xs text-apple-text-3 hover:text-apple-text">Cancel</button>
                     </div>
                   </div>
@@ -747,7 +749,7 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
           <div className="flex gap-2">
             <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSection()} placeholder="New section name…" className="flex-1 px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
             <input type="number" min="5" max="600" value={newTimeLimit} onChange={e => setNewTimeLimit(e.target.value)} placeholder="Sec" className="w-20 px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" title="Section time limit (seconds)" />
-            <button onClick={addSection} disabled={!newName.trim() || adding} className="px-4 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-1.5">
+            <button onClick={addSection} disabled={!newName.trim() || adding} className="px-4 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-1.5">
               {adding && <Spinner size={3} />}Add
             </button>
           </div>
@@ -931,7 +933,7 @@ function EditQuestionModal({ question, sections, onClose, onSaved }) {
 
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
             {saving && <Spinner size={4} />}{saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
@@ -1049,7 +1051,7 @@ function QuizQuestionsPanel({ quiz, onBack }) {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             Upload CSV
           </button>
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-blue-600 transition-colors shadow-apple-sm">
+          <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
             Add Question
           </button>
@@ -1274,7 +1276,7 @@ function QuizzesTab() {
           <h2 className="text-xl font-bold text-apple-text tracking-tight">Quizzes</h2>
           <p className="text-sm text-apple-text-2 mt-0.5">{quizzes.length} quizzes · only one can be active at a time</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-blue-600 transition-colors shadow-apple-sm">
+        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
           Create Quiz
         </button>
@@ -1369,7 +1371,7 @@ function CreateTeamModal({ onClose, onCreated }) {
         </div>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
             {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Team'}
           </button>
         </div>
@@ -1422,7 +1424,7 @@ function UploadTeamsModal({ onClose, onUploaded }) {
               <p className="text-sm text-apple-text-2 mt-1">{result.created} team{result.created !== 1 ? 's' : ''} imported</p>
               {result.errors?.length > 0 && result.errors.map((e, i) => <p key={i} className="text-xs text-apple-red mt-1">{e}</p>)}
             </div>
-            <button onClick={onClose} className="px-6 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors">Done</button>
+            <button onClick={onClose} className="px-6 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors">Done</button>
           </div>
         ) : (
           <>
@@ -1446,7 +1448,7 @@ function UploadTeamsModal({ onClose, onUploaded }) {
 
             <div className="flex justify-end gap-3 pt-1">
               <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-              <button onClick={upload} disabled={!file || uploading} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center gap-2">
+              <button onClick={upload} disabled={!file || uploading} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
                 {uploading ? <><Spinner size={4} />Importing…</> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>Import Teams</>}
               </button>
             </div>
@@ -1523,7 +1525,7 @@ function TeamsTab() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             Upload CSV
           </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-blue-600 transition-colors shadow-apple-sm">
+          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
             Create Team
           </button>
@@ -1657,7 +1659,7 @@ function SettingsTab() {
           <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">New Admin Password</label>
           <input type="password" value={adminPassword} onChange={e => setAdminPassword(e.target.value)} placeholder="Leave blank to keep current" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
         </div>
-        <button onClick={save} disabled={saving} className="flex items-center gap-2 bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-blue-600 transition-colors disabled:opacity-50">
+        <button onClick={save} disabled={saving} className="flex items-center gap-2 bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-brand-orange-deep transition-colors disabled:opacity-50">
           {saving && <Spinner size={4} />}{saving ? 'Saving…' : 'Save Settings'}
         </button>
       </div>
@@ -1852,7 +1854,7 @@ function LiveControlTab() {
                         <button
                           onClick={() => control('showQuestion', q.id)}
                           disabled={busy[`showQuestion-${q.id}`]}
-                          className="flex items-center gap-1.5 text-xs font-semibold text-white bg-apple-blue px-3 py-1.5 rounded-apple hover:bg-blue-600 transition-colors disabled:opacity-50"
+                          className="flex items-center gap-1.5 text-xs font-semibold text-white bg-apple-blue px-3 py-1.5 rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50"
                         >
                           {busy[`showQuestion-${q.id}`] ? <Spinner size={3} /> : null}
                           Show on Screen
@@ -1963,19 +1965,20 @@ export default function AdminPage() {
   // Show login form if auth check is done but not authenticated as admin
   if (authChecked && !me) {
     return (
-      <div className="min-h-screen bg-apple-gray flex items-center justify-center p-5">
-        <div className="w-full max-w-sm">
+      <div className="min-h-screen bg-brand-mesh flex items-center justify-center p-5 relative overflow-hidden">
+        <div className="brand-orb w-80 h-80 -top-16 -left-10 bg-brand-orange-soft/40" />
+        <div className="w-full max-w-sm relative z-10 animate-brand-fade-up">
           <div className="text-center mb-8">
-            <div className="w-14 h-14 bg-apple-blue rounded-apple-xl flex items-center justify-center mx-auto mb-4 shadow-apple-md">
-              <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <div className="inline-flex mb-4">
+              <LogoMark size="xl" className="shadow-brand rounded-[16px]" />
             </div>
-            <h1 className="text-2xl font-bold text-apple-text tracking-tight">Admin Portal</h1>
-            <p className="text-apple-text-2 text-sm mt-1">Quizzy</p>
+            <h1 className="font-display text-2xl font-bold text-brand-ink tracking-tight">Admin Portal</h1>
+            <p className="text-brand-ink-2 text-sm mt-1">Sign in to run Quizzy</p>
           </div>
-          <div className="bg-white rounded-apple-xl shadow-apple-md p-8">
+          <div className="bg-white/90 backdrop-blur-xl border border-white/70 rounded-apple-xl shadow-apple-md p-8">
             <form onSubmit={handleAdminLogin} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Admin Password</label>
+                <label className="block text-xs font-semibold text-brand-ink-2 uppercase tracking-wide mb-1.5">Admin Password</label>
                 <input
                   type="password"
                   value={loginPassword}
@@ -1983,7 +1986,7 @@ export default function AdminPage() {
                   placeholder="••••••••"
                   required
                   autoFocus
-                  className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all"
+                  className="w-full px-4 py-2.5 bg-brand-surface border border-brand-line rounded-apple text-brand-ink text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent transition-all"
                 />
               </div>
               {loginError && (
@@ -1992,7 +1995,7 @@ export default function AdminPage() {
               <button
                 type="submit"
                 disabled={loginLoading}
-                className="w-full bg-apple-blue text-white font-semibold py-3 rounded-apple text-sm hover:bg-blue-600 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                className="w-full bg-brand-orange text-white font-semibold py-3 rounded-apple text-sm hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-brand"
               >
                 {loginLoading ? (
                   <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>Signing in…</>
@@ -2000,7 +2003,7 @@ export default function AdminPage() {
               </button>
             </form>
             <div className="mt-4 text-center">
-              <a href="/" className="text-xs text-apple-text-3 hover:text-apple-blue transition-colors">← Back to contestant login</a>
+              <a href="/" className="text-xs text-brand-ink-3 hover:text-brand-orange transition-colors">← Back to contestant login</a>
             </div>
           </div>
         </div>
@@ -2018,25 +2021,23 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-apple-gray">
-      <header className="bg-white/80 backdrop-blur-md border-b border-apple-gray-2 sticky top-0 z-40">
-        <div className="max-w-6xl mx-auto px-5 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className="text-lg font-bold text-apple-text tracking-tight">Quizzy</span>
-            <span className="text-xs font-semibold text-apple-blue bg-blue-50 px-2 py-0.5 rounded-full">Admin</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {me && <span className="text-sm text-apple-text-2 hidden sm:block">{me.username || 'Admin'}</span>}
-            <a href="/live" target="_blank" className="text-sm text-apple-text-2 hover:text-apple-blue transition-colors font-medium hidden sm:block">Live Screen ↗</a>
-            <button onClick={logout} className="text-sm text-apple-text-2 hover:text-apple-blue transition-colors font-medium">Sign Out</button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-brand-surface">
+      <AppHeader
+        href="/admin"
+        badge={<span className="text-[11px] font-semibold text-brand-orange bg-brand-mist border border-orange-200/70 px-2 py-0.5 rounded-md">Admin</span>}
+        right={
+          <>
+            {me && <span className="text-sm text-brand-ink-2 hidden sm:block">{me.username || 'Admin'}</span>}
+            <a href="/live" target="_blank" className="text-sm text-brand-ink-2 hover:text-brand-orange transition-colors font-medium hidden sm:block">Live Screen ↗</a>
+            <button onClick={logout} className="text-sm text-brand-ink-2 hover:text-brand-orange transition-colors font-medium">Sign Out</button>
+          </>
+        }
+      />
 
       <div className="max-w-6xl mx-auto px-5 py-6">
-        <div className="flex items-center gap-1 bg-white border border-apple-gray-2 rounded-apple-lg p-1 shadow-apple-sm mb-7 w-fit overflow-x-auto">
+        <div className="flex items-center gap-1 bg-white border border-brand-line rounded-apple-lg p-1 shadow-apple-sm mb-7 w-fit overflow-x-auto">
           {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-2 px-4 py-2 rounded-apple text-sm font-semibold transition-all whitespace-nowrap ${tab === t.key ? 'bg-apple-blue text-white shadow-apple-sm' : 'text-apple-text-2 hover:text-apple-text hover:bg-apple-gray'}`}>
+            <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-2 px-4 py-2 rounded-apple text-sm font-semibold transition-all whitespace-nowrap ${tab === t.key ? 'bg-brand-orange text-white shadow-apple-sm' : 'text-brand-ink-2 hover:text-brand-ink hover:bg-brand-surface'}`}>
               {t.icon}
               <span className="hidden sm:inline">{t.label}</span>
             </button>
