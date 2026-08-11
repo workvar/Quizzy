@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ['@prisma/client'],
+  // Next 14 name for externalizing Prisma (Next 15+ uses top-level serverExternalPackages)
+  experimental: {
+    serverComponentsExternalPackages: ['@prisma/client'],
+  },
 };
 module.exports = nextConfig;
