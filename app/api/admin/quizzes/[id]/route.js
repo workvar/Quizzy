@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/session';
 import prisma from '@/lib/prisma';
+import { getLiveState, updateLiveState, emitToAll } from '@/lib/socket-emitter';
 
 export async function PUT(request, { params }) {
   const session = await requireAdmin();
@@ -16,8 +17,33 @@ export async function PUT(request, { params }) {
   }
   if (isDisabled !== undefined) data.isDisabled = !!isDisabled;
 
-  await prisma.quiz.update({ where: { id: parseInt(params.id) }, data });
-  return NextResponse.json({ success: true });
+  const quizId = parseInt(params.id);
+
+  // Disabling a quiz also clears active so Live/contestants don't keep using it
+  if (data.isDisabled === true) {
+    data.isActive = false;
+  }
+
+  const updated = await prisma.quiz.update({ where: { id: quizId }, data });
+
+  if (data.isDisabled === true) {
+    const live = getLiveState();
+    if (live.activeQuizId === quizId) {
+      updateLiveState({
+        activeQuizId: null,
+        activeQuizTitle: null,
+        timeLimitSeconds: null,
+        currentQuestion: null,
+        showResults: false,
+        resultStats: null,
+        fastestAnswers: [],
+        submittedTeamIds: [],
+      });
+      emitToAll('quiz:activated', { quizId: null, title: null, timeLimitSeconds: null });
+    }
+  }
+
+  return NextResponse.json({ success: true, isActive: updated.isActive, isDisabled: updated.isDisabled });
 }
 
 export async function DELETE(request, { params }) {

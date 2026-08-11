@@ -1314,7 +1314,7 @@ function QuizzesTab() {
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     Manage
                   </button>
-                  {!quiz.isActive && (
+                  {!quiz.isActive && !quiz.isDisabled && (
                     <button onClick={() => activateQuiz(quiz)} disabled={activating[quiz.id]} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-green px-3 py-1.5 rounded-apple hover:bg-green-600 transition-colors disabled:opacity-50">
                       {activating[quiz.id] ? <Spinner size={3} /> : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
                       Activate
@@ -1670,14 +1670,51 @@ function SettingsTab() {
 /* ════════════════════════════════════════
    LIVE CONTROL TAB
    ════════════════════════════════════════ */
+function pickDefaultLiveQuiz(quizzes) {
+  if (!Array.isArray(quizzes) || quizzes.length === 0) return null;
+  return (
+    quizzes.find(q => q.isActive && !q.isDisabled) ||
+    quizzes.find(q => !q.isDisabled) ||
+    null
+  );
+}
+
 function LiveControlTab() {
+  const confirm = useConfirm();
+  const [quizzes, setQuizzes] = useState([]);
+  const [selectedQuizId, setSelectedQuizId] = useState('');
+  const selectedQuizIdRef = useRef('');
   const [activeQuiz, setActiveQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [sections, setSections] = useState([]);
   const [liveState, setLiveState] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [switching, setSwitching] = useState(false);
   const [busy, setBusy] = useState({});
+  const [switchError, setSwitchError] = useState('');
   const feedRef = useRef(null);
+
+  const setSelected = (id, quiz = null) => {
+    selectedQuizIdRef.current = id ? String(id) : '';
+    setSelectedQuizId(selectedQuizIdRef.current);
+    if (quiz) setActiveQuiz(quiz);
+  };
+
+  const loadQuizContent = useCallback(async (quizId) => {
+    if (!quizId) {
+      setQuestions([]);
+      setSections([]);
+      return;
+    }
+    const [qs, secs] = await Promise.all([
+      fetch(`/api/admin/questions?quizId=${quizId}`).then(r => r.json()),
+      fetch(`/api/admin/sections?quizId=${quizId}`).then(r => r.json()),
+    ]);
+    if (Array.isArray(qs)) setQuestions(qs);
+    else setQuestions([]);
+    if (Array.isArray(secs)) setSections(secs);
+    else setSections([]);
+  }, []);
 
   const loadAll = useCallback(async () => {
     try {
@@ -1686,21 +1723,17 @@ function LiveControlTab() {
         fetch('/api/admin/live').then(r => r.json()),
       ]);
       if (Array.isArray(qdata)) {
-        const active = qdata.find(q => q.isActive);
-        setActiveQuiz(active || null);
-        if (active) {
-          const [qs, secs] = await Promise.all([
-            fetch(`/api/admin/questions?quizId=${active.id}`).then(r => r.json()),
-            fetch(`/api/admin/sections?quizId=${active.id}`).then(r => r.json()),
-          ]);
-          if (Array.isArray(qs)) setQuestions(qs);
-          if (Array.isArray(secs)) setSections(secs);
-        }
+        setQuizzes(qdata);
+        const prevId = selectedQuizIdRef.current;
+        const prevQuiz = prevId ? qdata.find(q => String(q.id) === String(prevId) && !q.isDisabled) : null;
+        const picked = prevQuiz || pickDefaultLiveQuiz(qdata);
+        setSelected(picked ? String(picked.id) : '', picked || null);
+        await loadQuizContent(picked?.id || null);
       }
       setLiveState(ldata);
     } catch {}
     setLoading(false);
-  }, []);
+  }, [loadQuizContent]);
 
   useEffect(() => {
     loadAll();
@@ -1709,6 +1742,53 @@ function LiveControlTab() {
     }, 2000);
     return () => clearInterval(id);
   }, [loadAll]);
+
+  const switchQuiz = async (nextId) => {
+    setSwitchError('');
+    if (!nextId) return;
+    const quiz = quizzes.find(q => String(q.id) === String(nextId));
+    if (!quiz) return;
+    if (quiz.isDisabled) {
+      setSwitchError('That quiz is disabled. Enable it from the Quizzes tab first.');
+      return;
+    }
+    if (String(quiz.id) === String(activeQuiz?.id) && quiz.isActive) {
+      setSelected(String(quiz.id), quiz);
+      await loadQuizContent(quiz.id);
+      return;
+    }
+
+    const ok = await confirm({
+      title: 'Switch live quiz?',
+      message: `Show "${quiz.title}" on Live Control and the projector? This clears the current on-screen question.`,
+      confirmLabel: 'Switch quiz',
+      tone: 'primary',
+    });
+    if (!ok) return;
+
+    setSwitching(true);
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quiz.id}/activate`, { method: 'POST' });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setSwitchError(data.error || 'Failed to switch quiz');
+        setSwitching(false);
+        return;
+      }
+      const nextQuiz = { ...quiz, isActive: true, isDisabled: false };
+      setSelected(String(quiz.id), nextQuiz);
+      setQuizzes(prev => prev.map(q => ({
+        ...q,
+        isActive: q.id === quiz.id,
+      })));
+      await loadQuizContent(quiz.id);
+      const live = await fetch('/api/admin/live').then(r => r.json());
+      setLiveState(live);
+    } catch {
+      setSwitchError('Network error while switching quiz');
+    }
+    setSwitching(false);
+  };
 
   const control = async (action, questionId) => {
     const key = `${action}-${questionId || ''}`;
@@ -1734,7 +1814,8 @@ function LiveControlTab() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action, sectionId }),
       });
-      await loadAll();
+      if (selectedQuizId) await loadQuizContent(selectedQuizId);
+      else await loadAll();
     } catch {}
     setBusy(prev => ({ ...prev, [key]: false }));
   };
@@ -1743,10 +1824,15 @@ function LiveControlTab() {
 
   const currentQId = liveState?.currentQuestion?.id;
   const fastestAnswers = liveState?.fastestAnswers || [];
+  const enabledQuizzes = quizzes.filter(q => !q.isDisabled);
+  const quizOptions = enabledQuizzes.map(q => ({
+    value: String(q.id),
+    label: q.isActive ? `${q.title} · Live` : q.title,
+  }));
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-apple-text tracking-tight">Live Control</h2>
           <p className="text-sm text-apple-text-2 mt-0.5">
@@ -1754,22 +1840,49 @@ function LiveControlTab() {
             <a href="/live" target="_blank" className="text-apple-blue hover:underline font-semibold">/live ↗</a>
           </p>
         </div>
-        <button onClick={loadAll} className="p-2 text-apple-text-3 hover:text-apple-blue transition-colors">
+        <button onClick={loadAll} className="p-2 text-apple-text-3 hover:text-apple-blue transition-colors" title="Refresh">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
         </button>
       </div>
 
+      <div className="bg-white border border-apple-gray-2 rounded-apple-lg p-4 shadow-apple-sm mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+          <div className="flex-1 min-w-0">
+            <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Quiz on Live</label>
+            <SearchableSelect
+              value={selectedQuizId}
+              onChange={switchQuiz}
+              disabled={switching || enabledQuizzes.length === 0}
+              placeholder={enabledQuizzes.length === 0 ? 'No enabled quizzes' : 'Select a quiz…'}
+              searchPlaceholder="Search quizzes…"
+              options={quizOptions}
+            />
+          </div>
+          <div className="flex items-center gap-2 flex-shrink-0 pb-0.5">
+            {switching && <Spinner size={4} />}
+            {activeQuiz?.isActive && !activeQuiz?.isDisabled ? (
+              <span className="text-xs font-semibold text-apple-green bg-green-50 border border-green-200 px-2.5 py-1 rounded-md">Live</span>
+            ) : activeQuiz ? (
+              <span className="text-xs font-semibold text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-md">Not activated</span>
+            ) : null}
+          </div>
+        </div>
+        {switchError && (
+          <p className="mt-2 text-sm text-apple-red">{switchError}</p>
+        )}
+        {enabledQuizzes.length === 0 && (
+          <p className="mt-2 text-sm text-amber-700">No enabled quizzes. Create or enable one in the Quizzes tab.</p>
+        )}
+        {quizzes.some(q => q.isActive && q.isDisabled) && (
+          <p className="mt-2 text-sm text-amber-700">A disabled quiz was previously marked active — pick an enabled quiz above to take over Live.</p>
+        )}
+      </div>
+
       {!activeQuiz ? (
         <div className="bg-yellow-50 border border-yellow-200 rounded-apple-lg p-5 mb-6">
-          <p className="text-sm font-semibold text-yellow-700">No active quiz. Activate a quiz from the Quizzes tab first.</p>
+          <p className="text-sm font-semibold text-yellow-700">No quiz selected for Live. Choose an enabled quiz above.</p>
         </div>
-      ) : (
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-sm text-apple-text-2">Active quiz:</span>
-          <span className="text-sm font-bold text-apple-text">{activeQuiz.title}</span>
-          <span className="text-xs font-semibold text-apple-green bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">Live</span>
-        </div>
-      )}
+      ) : null}
 
       {sections.length > 0 && (
         <div className="mb-6">

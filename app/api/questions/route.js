@@ -6,7 +6,7 @@ export async function GET() {
   const session = await requireTeam();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const activeQuiz = await prisma.quiz.findFirst({ where: { isActive: true } });
+  const activeQuiz = await prisma.quiz.findFirst({ where: { isActive: true, isDisabled: false } });
   if (!activeQuiz) return NextResponse.json([]);
 
   const questions = await prisma.question.findMany({
