@@ -1,4 +1,5 @@
 import './globals.css';
+import { DialogProvider } from '@/components/DialogProvider';
 
 export const metadata = {
   title: 'Quizzy',
@@ -8,7 +9,9 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <DialogProvider>{children}</DialogProvider>
+      </body>
     </html>
   );
 }

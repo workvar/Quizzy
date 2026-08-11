@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import AnswerChart from '@/components/AnswerChart';
 import CodeEditor from '@/components/CodeEditor';
+import SearchableSelect from '@/components/SearchableSelect';
+import { useConfirm } from '@/components/DialogProvider';
 
 /* ─── Markdown renderer ─── */
 function renderMd(text) {
@@ -196,13 +198,16 @@ function AddQuestionModal({ quizId, sections, onClose, onAdded }) {
           {sections?.length > 0 && (
             <div>
               <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Section (optional)</label>
-              <div className="relative">
-                <select value={sectionId} onChange={e => setSectionId(e.target.value)} className="w-full appearance-none px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all pr-8">
-                  <option value="">No section</option>
-                  {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-apple-text-3 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
-              </div>
+              <SearchableSelect
+                value={sectionId}
+                onChange={setSectionId}
+                placeholder="No section"
+                searchPlaceholder="Search sections…"
+                options={[
+                  { value: '', label: 'No section' },
+                  ...sections.map(s => ({ value: String(s.id), label: s.name })),
+                ]}
+              />
             </div>
           )}
           <div>
@@ -644,6 +649,7 @@ function LiveScoresTab() {
    MANAGE SECTIONS MODAL
    ════════════════════════════════════════ */
 function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
+  const confirm = useConfirm();
   const [newName, setNewName] = useState('');
   const [newTimeLimit, setNewTimeLimit] = useState('');
   const [adding, setAdding] = useState(false);
@@ -684,7 +690,13 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
   };
 
   const deleteSection = async (id, name) => {
-    if (!confirm(`Delete section "${name}"? Questions in it will become unsectioned.`)) return;
+    const ok = await confirm({
+      title: 'Delete section?',
+      message: `Delete section "${name}"? Questions in it will become unsectioned.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setBusy(prev => ({ ...prev, [`del-${id}`]: true }));
     try {
       await fetch(`/api/admin/sections/${id}`, { method: 'DELETE' });
@@ -833,13 +845,16 @@ function EditQuestionModal({ question, sections, onClose, onSaved }) {
           {sections?.length > 0 && (
             <div>
               <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Section</label>
-              <div className="relative">
-                <select value={sectionId} onChange={e => setSectionId(e.target.value)} className="w-full appearance-none px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all pr-8">
-                  <option value="">No section</option>
-                  {sections.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-apple-text-3 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
-              </div>
+              <SearchableSelect
+                value={sectionId}
+                onChange={setSectionId}
+                placeholder="No section"
+                searchPlaceholder="Search sections…"
+                options={[
+                  { value: '', label: 'No section' },
+                  ...sections.map(s => ({ value: String(s.id), label: s.name })),
+                ]}
+              />
             </div>
           )}
           <div>
@@ -929,6 +944,7 @@ function EditQuestionModal({ question, sections, onClose, onSaved }) {
    QUESTIONS LIST (inside a quiz)
    ════════════════════════════════════════ */
 function QuizQuestionsPanel({ quiz, onBack }) {
+  const confirm = useConfirm();
   const [questions, setQuestions] = useState([]);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -972,7 +988,13 @@ function QuizQuestionsPanel({ quiz, onBack }) {
   };
 
   const deleteQuestion = async (q) => {
-    if (!confirm(`Delete "${q.title}"?`)) return;
+    const ok = await confirm({
+      title: 'Delete question?',
+      message: `Delete "${q.title}"?`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setDeleting(prev => ({ ...prev, [q.id]: true }));
     try {
       await fetch(`/api/admin/questions/${q.id}`, { method: 'DELETE' });
@@ -1173,6 +1195,7 @@ function QuizQuestionsPanel({ quiz, onBack }) {
    QUIZZES TAB
    ════════════════════════════════════════ */
 function QuizzesTab() {
+  const confirm = useConfirm();
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -1191,7 +1214,13 @@ function QuizzesTab() {
   useEffect(() => { loadQuizzes(); }, [loadQuizzes]);
 
   const activateQuiz = async (quiz) => {
-    if (!confirm(`Set "${quiz.title}" as the active quiz? Contestants will see its released questions.`)) return;
+    const ok = await confirm({
+      title: 'Activate quiz?',
+      message: `Set "${quiz.title}" as the active quiz? Contestants will see its released questions.`,
+      confirmLabel: 'Activate',
+      tone: 'primary',
+    });
+    if (!ok) return;
     setActivating(prev => ({ ...prev, [quiz.id]: true }));
     try {
       await fetch(`/api/admin/quizzes/${quiz.id}/activate`, { method: 'POST' });
@@ -1212,7 +1241,13 @@ function QuizzesTab() {
   };
 
   const deleteQuiz = async (quiz) => {
-    if (!confirm(`Delete quiz "${quiz.title}" and ALL its questions? This cannot be undone.`)) return;
+    const ok = await confirm({
+      title: 'Delete quiz?',
+      message: `Delete quiz "${quiz.title}" and ALL its questions? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setDeleting(prev => ({ ...prev, [quiz.id]: true }));
     try {
       await fetch(`/api/admin/quizzes/${quiz.id}`, { method: 'DELETE' });
@@ -1423,6 +1458,7 @@ function UploadTeamsModal({ onClose, onUploaded }) {
 }
 
 function TeamsTab() {
+  const confirm = useConfirm();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -1441,7 +1477,13 @@ function TeamsTab() {
   useEffect(() => { loadTeams(); }, [loadTeams]);
 
   const deleteTeam = async (team) => {
-    if (!confirm(`Delete team "${team.name}"?`)) return;
+    const ok = await confirm({
+      title: 'Delete team?',
+      message: `Delete team "${team.name}"?`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
     setDeleting(prev => ({ ...prev, [team.id]: true }));
     try {
       await fetch('/api/admin/teams', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: team.id }) });
@@ -1452,7 +1494,13 @@ function TeamsTab() {
 
   const toggleBan = async (team) => {
     const action = team.isBanned ? 'unban' : 'ban';
-    if (!confirm(`${action === 'ban' ? 'Ban' : 'Unban'} team "${team.name}"?`)) return;
+    const ok = await confirm({
+      title: action === 'ban' ? 'Ban team?' : 'Unban team?',
+      message: `${action === 'ban' ? 'Ban' : 'Unban'} team "${team.name}"?`,
+      confirmLabel: action === 'ban' ? 'Ban' : 'Unban',
+      tone: action === 'ban' ? 'danger' : 'primary',
+    });
+    if (!ok) return;
     setBanning(prev => ({ ...prev, [team.id]: true }));
     try {
       await fetch(`/api/admin/teams/${team.id}/ban`, { method: 'POST' });

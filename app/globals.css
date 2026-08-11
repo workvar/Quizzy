@@ -42,3 +42,14 @@ body {
 /* SSE notification slide */
 @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .notify-in { animation: slideDown 0.3s ease; }
+
+/* App dialog / searchable select */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes dialogIn {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .notify-in { animation: none !important; }
+}
+
