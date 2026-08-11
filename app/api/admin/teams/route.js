@@ -7,7 +7,10 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const teams = await prisma.team.findMany({
-    include: { answers: { select: { score: true, isCorrect: true } } },
+    include: {
+      answers: { select: { score: true, isCorrect: true } },
+      group: { select: { id: true, name: true } },
+    },
     orderBy: { name: 'asc' },
   });
 
@@ -15,6 +18,8 @@ export async function GET() {
     id: team.id,
     name: team.name,
     isBanned: team.isBanned,
+    groupId: team.groupId,
+    groupName: team.group?.name ?? null,
     createdAt: team.createdAt,
     total_score: team.answers.reduce((sum, a) => sum + a.score, 0),
     correct_count: team.answers.filter(a => a.isCorrect).length,
@@ -26,11 +31,16 @@ export async function POST(request) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { name, password } = await request.json();
+  const { name, password, groupId } = await request.json();
   if (!name || !password) return NextResponse.json({ error: 'Name and password required' }, { status: 400 });
 
+  const data = { name: name.trim(), password };
+  if (groupId !== undefined && groupId !== null && groupId !== '') {
+    data.groupId = parseInt(groupId);
+  }
+
   try {
-    const team = await prisma.team.create({ data: { name: name.trim(), password } });
+    const team = await prisma.team.create({ data });
     return NextResponse.json({ id: team.id });
   } catch {
     return NextResponse.json({ error: 'Team name already exists' }, { status: 400 });

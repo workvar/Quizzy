@@ -8,16 +8,17 @@ datasource db {
 }
 
 model Quiz {
-  id                Int        @id @default(autoincrement())
+  id                Int             @id @default(autoincrement())
   title             String
   description       String?
-  isActive          Boolean    @default(false) @map("is_active")
-  isDisabled        Boolean    @default(false) @map("is_disabled")
-  pointsPerQuestion Int        @default(10) @map("points_per_question")
-  timeLimitSeconds  Int?       @map("time_limit_seconds")
-  createdAt         DateTime   @default(now()) @map("created_at")
+  isActive          Boolean         @default(false) @map("is_active")
+  isDisabled        Boolean         @default(false) @map("is_disabled")
+  pointsPerQuestion Int             @default(10) @map("points_per_question")
+  timeLimitSeconds  Int?            @map("time_limit_seconds")
+  createdAt         DateTime        @default(now()) @map("created_at")
   questions         Question[]
   sections          Section[]
+  teamGroups        QuizTeamGroup[]
 
   @@map("quizzy")
 }
@@ -36,14 +37,38 @@ model Section {
   @@map("sections")
 }
 
+model TeamGroup {
+  id        Int             @id @default(autoincrement())
+  name      String          @unique
+  createdAt DateTime        @default(now()) @map("created_at")
+  teams     Team[]
+  quizzes   QuizTeamGroup[]
+
+  @@map("team_groups")
+}
+
+model QuizTeamGroup {
+  quizId  Int @map("quiz_id")
+  groupId Int @map("group_id")
+  quiz    Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  group   TeamGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([quizId, groupId])
+  @@index([groupId])
+  @@map("quiz_team_groups")
+}
+
 model Team {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
   password  String
-  isBanned  Boolean  @default(false) @map("is_banned")
-  createdAt DateTime @default(now()) @map("created_at")
+  isBanned  Boolean    @default(false) @map("is_banned")
+  groupId   Int?       @map("group_id")
+  group     TeamGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  createdAt DateTime   @default(now()) @map("created_at")
   answers   Answer[]
 
+  @@index([groupId])
   @@map("teams")
 }
 

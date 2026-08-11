@@ -455,8 +455,20 @@ function CreateQuizModal({ onClose, onCreated }) {
   const [description, setDescription] = useState('');
   const [pointsPerQuestion, setPointsPerQuestion] = useState('10');
   const [timeLimitSeconds, setTimeLimitSeconds] = useState('');
+  const [groups, setGroups] = useState([]);
+  const [groupIds, setGroupIds] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/admin/groups').then(r => r.json()).then(d => {
+      if (Array.isArray(d)) setGroups(d);
+    }).catch(() => {});
+  }, []);
+
+  const toggleGroup = (id) => {
+    setGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
 
   const submit = async () => {
     setError('');
@@ -471,6 +483,7 @@ function CreateQuizModal({ onClose, onCreated }) {
           description: description.trim(),
           pointsPerQuestion: parseInt(pointsPerQuestion) || 10,
           timeLimitSeconds: timeLimitSeconds ? parseInt(timeLimitSeconds) : null,
+          groupIds,
         }),
       });
       const data = await res.json();
@@ -503,11 +516,93 @@ function CreateQuizModal({ onClose, onCreated }) {
             <input type="number" min="5" max="600" value={timeLimitSeconds} onChange={e => setTimeLimitSeconds(e.target.value)} placeholder="e.g. 60" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
           </div>
         </div>
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Team Groups (optional)</label>
+          <p className="text-xs text-apple-text-3 mb-2">Leave empty to allow all teams. Select groups to restrict who can attempt this quiz.</p>
+          {groups.length === 0 ? (
+            <p className="text-xs text-apple-text-3">No groups yet — create them under Teams.</p>
+          ) : (
+            <div className="max-h-36 overflow-y-auto space-y-1.5 border border-apple-gray-2 rounded-apple p-2 bg-apple-gray/40">
+              {groups.map(g => (
+                <label key={g.id} className="flex items-center gap-2 px-2 py-1.5 rounded-apple hover:bg-white cursor-pointer">
+                  <input type="checkbox" checked={groupIds.includes(g.id)} onChange={() => toggleGroup(g.id)} className="rounded border-apple-gray-3 text-apple-blue focus:ring-apple-blue" />
+                  <span className="text-sm text-apple-text">{g.name}</span>
+                  <span className="text-xs text-apple-text-3 ml-auto">{g.teamCount} team{g.teamCount !== 1 ? 's' : ''}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
           <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
             {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Quiz'}
           </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function AssignGroupsModal({ quiz, onClose, onSaved }) {
+  const [groups, setGroups] = useState([]);
+  const [groupIds, setGroupIds] = useState(quiz.groupIds || []);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetch('/api/admin/groups').then(r => r.json()).then(d => {
+      if (Array.isArray(d)) setGroups(d);
+    }).catch(() => {});
+  }, []);
+
+  const toggleGroup = (id) => {
+    setGroupIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quiz.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupIds }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Failed'); setSaving(false); return; }
+      onSaved();
+      onClose();
+    } catch { setError('Network error'); }
+    setSaving(false);
+  };
+
+  return (
+    <Modal title={`Assign Groups: ${quiz.title}`} onClose={onClose}>
+      <div className="space-y-4">
+        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-apple px-4 py-2.5">{error}</div>}
+        <p className="text-sm text-apple-text-2">Only teams in the selected groups can attempt this quiz. Clear all to allow every team.</p>
+        {groups.length === 0 ? (
+          <p className="text-sm text-apple-text-3">No team groups yet. Create groups under the Teams tab first.</p>
+        ) : (
+          <div className="max-h-64 overflow-y-auto space-y-1.5 border border-apple-gray-2 rounded-apple p-2 bg-apple-gray/40">
+            {groups.map(g => (
+              <label key={g.id} className="flex items-center gap-2 px-2 py-1.5 rounded-apple hover:bg-white cursor-pointer">
+                <input type="checkbox" checked={groupIds.includes(g.id)} onChange={() => toggleGroup(g.id)} className="rounded border-apple-gray-3 text-apple-blue focus:ring-apple-blue" />
+                <span className="text-sm text-apple-text">{g.name}</span>
+                <span className="text-xs text-apple-text-3 ml-auto">{g.teamCount} team{g.teamCount !== 1 ? 's' : ''}</span>
+              </label>
+            ))}
+          </div>
+        )}
+        <div className="flex justify-between gap-3 pt-2">
+          <button type="button" onClick={() => setGroupIds([])} className="px-3 py-2 text-sm font-semibold text-apple-text-2 hover:text-apple-blue">Clear all</button>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
+            <button onClick={save} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
+              {saving && <Spinner size={4} />}{saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         </div>
       </div>
     </Modal>
@@ -1201,6 +1296,7 @@ function QuizzesTab() {
   const [quizzes, setQuizzes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
+  const [assignQuiz, setAssignQuiz] = useState(null);
   const [activating, setActivating] = useState({});
   const [deleting, setDeleting] = useState({});
   const [selectedQuiz, setSelectedQuiz] = useState(null);
@@ -1218,7 +1314,7 @@ function QuizzesTab() {
   const activateQuiz = async (quiz) => {
     const ok = await confirm({
       title: 'Activate quiz?',
-      message: `Set "${quiz.title}" as the active quiz? Contestants will see its released questions.`,
+      message: `Activate "${quiz.title}"? Assigned team groups can attempt its released questions. Multiple quizzes can be active for different groups.`,
       confirmLabel: 'Activate',
       tone: 'primary',
     });
@@ -1226,6 +1322,26 @@ function QuizzesTab() {
     setActivating(prev => ({ ...prev, [quiz.id]: true }));
     try {
       await fetch(`/api/admin/quizzes/${quiz.id}/activate`, { method: 'POST' });
+      loadQuizzes();
+    } catch {}
+    setActivating(prev => ({ ...prev, [quiz.id]: false }));
+  };
+
+  const deactivateQuiz = async (quiz) => {
+    const ok = await confirm({
+      title: 'Deactivate quiz?',
+      message: `Deactivate "${quiz.title}"? Teams will no longer see its questions.`,
+      confirmLabel: 'Deactivate',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    setActivating(prev => ({ ...prev, [quiz.id]: true }));
+    try {
+      await fetch(`/api/admin/quizzes/${quiz.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: false }),
+      });
       loadQuizzes();
     } catch {}
     setActivating(prev => ({ ...prev, [quiz.id]: false }));
@@ -1270,11 +1386,12 @@ function QuizzesTab() {
   return (
     <div>
       {showCreate && <CreateQuizModal onClose={() => setShowCreate(false)} onCreated={loadQuizzes} />}
+      {assignQuiz && <AssignGroupsModal quiz={assignQuiz} onClose={() => setAssignQuiz(null)} onSaved={loadQuizzes} />}
 
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl font-bold text-apple-text tracking-tight">Quizzes</h2>
-          <p className="text-sm text-apple-text-2 mt-0.5">{quizzes.length} quizzes · only one can be active at a time</p>
+          <p className="text-sm text-apple-text-2 mt-0.5">{quizzes.length} quizzes · assign groups to restrict access</p>
         </div>
         <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm">
           <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
@@ -1300,21 +1417,38 @@ function QuizzesTab() {
                     {quiz.isDisabled ? <span className="text-xs font-semibold text-apple-red bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">Disabled</span> : quiz.isActive && <span className="text-xs font-semibold text-apple-green bg-green-100 border border-green-200 px-2 py-0.5 rounded-full">Active</span>}
                   </div>
                   {quiz.description && <p className="text-sm text-apple-text-2 mb-2">{quiz.description}</p>}
-                  <p className="text-xs text-apple-text-3">{quiz.questionCount} question{quiz.questionCount !== 1 ? 's' : ''}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs text-apple-text-3">{quiz.questionCount} question{quiz.questionCount !== 1 ? 's' : ''}</p>
+                    <span className="text-xs text-apple-text-3">·</span>
+                    {quiz.groups?.length ? (
+                      <p className="text-xs text-apple-text-2">
+                        Groups: {quiz.groups.map(g => g.name).join(', ')}
+                      </p>
+                    ) : (
+                      <p className="text-xs text-apple-text-3">All teams</p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-                  {/* Disable toggle */}
                   <div className="flex items-center gap-2 border border-apple-gray-2 rounded-apple px-3 py-1.5">
                     <span className="text-xs text-apple-text-2 font-medium">{quiz.isDisabled ? 'Disabled' : 'Enabled'}</span>
                     <button onClick={() => toggleDisable(quiz)} className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${quiz.isDisabled ? 'bg-apple-red' : 'bg-apple-green'}`}>
                       <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${quiz.isDisabled ? 'translate-x-0.5' : 'translate-x-4'}`}/>
                     </button>
                   </div>
+                  <button onClick={() => setAssignQuiz(quiz)} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-3 py-1.5 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors">
+                    Groups
+                  </button>
                   <button onClick={() => setSelectedQuiz(quiz)} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-2 px-3 py-1.5 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     Manage
                   </button>
-                  {!quiz.isActive && (
+                  {quiz.isActive ? (
+                    <button onClick={() => deactivateQuiz(quiz)} disabled={activating[quiz.id]} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-3 py-1.5 rounded-apple hover:border-apple-red hover:text-apple-red transition-colors disabled:opacity-50">
+                      {activating[quiz.id] ? <Spinner size={3} /> : null}
+                      Deactivate
+                    </button>
+                  ) : !quiz.isDisabled && (
                     <button onClick={() => activateQuiz(quiz)} disabled={activating[quiz.id]} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-green px-3 py-1.5 rounded-apple hover:bg-green-600 transition-colors disabled:opacity-50">
                       {activating[quiz.id] ? <Spinner size={3} /> : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>}
                       Activate
@@ -1336,11 +1470,71 @@ function QuizzesTab() {
 /* ════════════════════════════════════════
    TEAMS TAB
    ════════════════════════════════════════ */
-function CreateTeamModal({ onClose, onCreated }) {
-  const [teamname, setTeamname] = useState('');
-  const [password, setPassword] = useState('');
+function CreateGroupModal({ onClose, onCreated }) {
+  const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+
+  const submit = async () => {
+    setError('');
+    if (!name.trim()) { setError('Group name is required'); return; }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/admin/groups', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Failed'); setSaving(false); return; }
+      onCreated(data);
+      onClose();
+    } catch { setError('Network error'); }
+    setSaving(false);
+  };
+
+  return (
+    <Modal title="Create Team Group" onClose={onClose}>
+      <div className="space-y-4">
+        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-apple px-4 py-2.5">{error}</div>}
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Group Name</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Track A · Juniors" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
+        </div>
+        <div className="flex justify-end gap-3 pt-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
+          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
+            {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Group'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function CreateTeamModal({ onClose, onCreated, groups, onGroupsChange }) {
+  const [teamname, setTeamname] = useState('');
+  const [password, setPassword] = useState('');
+  const [groupId, setGroupId] = useState('__none__');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const groupOptions = [
+    { value: '__none__', label: 'No group' },
+    ...groups.map(g => ({ value: String(g.id), label: g.name })),
+  ];
+
+  const createGroup = async (name) => {
+    const res = await fetch('/api/admin/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    onGroupsChange?.();
+    setGroupId(String(data.id));
+  };
 
   const submit = async () => {
     setError('');
@@ -1348,7 +1542,9 @@ function CreateTeamModal({ onClose, onCreated }) {
     if (!password.trim()) { setError('Password is required'); return; }
     setSaving(true);
     try {
-      const res = await fetch('/api/admin/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: teamname.trim(), password }) });
+      const payload = { name: teamname.trim(), password };
+      if (groupId && groupId !== '__none__') payload.groupId = parseInt(groupId);
+      const res = await fetch('/api/admin/teams', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Failed'); setSaving(false); return; }
       onCreated();
@@ -1369,6 +1565,21 @@ function CreateTeamModal({ onClose, onCreated }) {
           <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Password</label>
           <input type="text" value={password} onChange={e => setPassword(e.target.value)} placeholder="Team login password" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
         </div>
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Team Group</label>
+          <SearchableSelect
+            value={groupId}
+            onChange={setGroupId}
+            options={groupOptions}
+            placeholder="Select group…"
+            searchPlaceholder="Search or add group…"
+            creatable
+            onCreate={async (name) => {
+              try { await createGroup(name); } catch (e) { setError(e.message); }
+            }}
+            createLabel={(q) => `Add new: “${q}”`}
+          />
+        </div>
         <div className="flex justify-end gap-3 pt-2">
           <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
           <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
@@ -1380,22 +1591,49 @@ function CreateTeamModal({ onClose, onCreated }) {
   );
 }
 
-function UploadTeamsModal({ onClose, onUploaded }) {
+function UploadTeamsModal({ onClose, onUploaded, groups, onGroupsChange }) {
   const [file, setFile] = useState(null);
+  const [groupId, setGroupId] = useState('__none__');
+  const [pendingNewName, setPendingNewName] = useState('');
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
+
+  const groupOptions = [
+    { value: '__none__', label: 'No group (optional)' },
+    ...groups.map(g => ({ value: String(g.id), label: g.name })),
+  ];
+
+  const createGroup = async (name) => {
+    const res = await fetch('/api/admin/groups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    onGroupsChange?.();
+    setPendingNewName('');
+    setGroupId(String(data.id));
+    return data;
+  };
 
   const upload = async () => {
     if (!file) { setError('Please select a CSV file'); return; }
     setError(''); setUploading(true);
     const form = new FormData();
     form.append('csv', file);
+    if (groupId && groupId !== '__none__') {
+      form.append('groupId', groupId);
+    } else if (pendingNewName.trim()) {
+      form.append('groupName', pendingNewName.trim());
+    }
     try {
       const res = await fetch('/api/admin/teams/upload', { method: 'POST', body: form });
       const data = await res.json();
       if (!res.ok) { setError(data.error || 'Upload failed'); setUploading(false); return; }
       setResult(data);
+      onGroupsChange?.();
       onUploaded();
     } catch { setError('Network error'); }
     setUploading(false);
@@ -1444,6 +1682,39 @@ function UploadTeamsModal({ onClose, onUploaded }) {
               </div>
             </details>
 
+            <div>
+              <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Assign to Team Group</label>
+              <p className="text-xs text-apple-text-3 mb-2">Search for a group, or type a new name and choose Add new.</p>
+              <SearchableSelect
+                value={pendingNewName ? `__new__:${pendingNewName}` : groupId}
+                onChange={(v) => {
+                  setPendingNewName('');
+                  setGroupId(v);
+                }}
+                options={
+                  pendingNewName
+                    ? [...groupOptions, { value: `__new__:${pendingNewName}`, label: pendingNewName }]
+                    : groupOptions
+                }
+                placeholder="Select group for this CSV…"
+                searchPlaceholder="Search or add group…"
+                creatable
+                onCreate={async (name) => {
+                  try {
+                    await createGroup(name);
+                  } catch {
+                    // Keep typed name so upload can create via groupName
+                    setPendingNewName(name);
+                    setGroupId('__none__');
+                  }
+                }}
+                createLabel={(q) => `Add new: “${q}”`}
+              />
+              {pendingNewName && (
+                <p className="text-xs text-apple-blue mt-1.5">Will create group “{pendingNewName}” on import.</p>
+              )}
+            </div>
+
             <DropZone file={file} onFile={setFile} />
 
             <div className="flex justify-end gap-3 pt-1">
@@ -1462,11 +1733,21 @@ function UploadTeamsModal({ onClose, onUploaded }) {
 function TeamsTab() {
   const confirm = useConfirm();
   const [teams, setTeams] = useState([]);
+  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [showUpload, setShowUpload] = useState(false);
+  const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [deleting, setDeleting] = useState({});
   const [banning, setBanning] = useState({});
+  const [updatingGroup, setUpdatingGroup] = useState({});
+
+  const loadGroups = useCallback(async () => {
+    try {
+      const data = await fetch('/api/admin/groups').then(r => r.json());
+      if (Array.isArray(data)) setGroups(data);
+    } catch {}
+  }, []);
 
   const loadTeams = useCallback(async () => {
     try {
@@ -1476,7 +1757,7 @@ function TeamsTab() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { loadTeams(); }, [loadTeams]);
+  useEffect(() => { loadTeams(); loadGroups(); }, [loadTeams, loadGroups]);
 
   const deleteTeam = async (team) => {
     const ok = await confirm({
@@ -1490,8 +1771,24 @@ function TeamsTab() {
     try {
       await fetch('/api/admin/teams', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: team.id }) });
       loadTeams();
+      loadGroups();
     } catch {}
     setDeleting(prev => ({ ...prev, [team.id]: false }));
+  };
+
+  const deleteGroup = async (group) => {
+    const ok = await confirm({
+      title: 'Delete group?',
+      message: `Delete group "${group.name}"? Teams in this group will be unassigned.`,
+      confirmLabel: 'Delete',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await fetch(`/api/admin/groups/${group.id}`, { method: 'DELETE' });
+      loadGroups();
+      loadTeams();
+    } catch {}
   };
 
   const toggleBan = async (team) => {
@@ -1511,16 +1808,40 @@ function TeamsTab() {
     setBanning(prev => ({ ...prev, [team.id]: false }));
   };
 
+  const setTeamGroup = async (team, nextGroupId) => {
+    setUpdatingGroup(prev => ({ ...prev, [team.id]: true }));
+    try {
+      await fetch(`/api/admin/teams/${team.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId: nextGroupId === '__none__' ? null : parseInt(nextGroupId) }),
+      });
+      loadTeams();
+      loadGroups();
+    } catch {}
+    setUpdatingGroup(prev => ({ ...prev, [team.id]: false }));
+  };
+
+  const groupSelectOptions = [
+    { value: '__none__', label: 'No group' },
+    ...groups.map(g => ({ value: String(g.id), label: g.name })),
+  ];
+
   return (
     <div>
-      {showCreate && <CreateTeamModal onClose={() => setShowCreate(false)} onCreated={loadTeams} />}
-      {showUpload && <UploadTeamsModal onClose={() => setShowUpload(false)} onUploaded={loadTeams} />}
-      <div className="flex items-center justify-between mb-6">
+      {showCreateGroup && <CreateGroupModal onClose={() => setShowCreateGroup(false)} onCreated={() => { loadGroups(); }} />}
+      {showCreate && <CreateTeamModal onClose={() => setShowCreate(false)} onCreated={loadTeams} groups={groups} onGroupsChange={loadGroups} />}
+      {showUpload && <UploadTeamsModal onClose={() => setShowUpload(false)} onUploaded={loadTeams} groups={groups} onGroupsChange={loadGroups} />}
+
+      <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-apple-text tracking-tight">Teams</h2>
-          <p className="text-sm text-apple-text-2 mt-0.5">{teams.length} registered</p>
+          <p className="text-sm text-apple-text-2 mt-0.5">{teams.length} registered · {groups.length} group{groups.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => setShowCreateGroup(true)} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-4 py-2 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors shadow-apple-sm">
+            Create Group
+          </button>
           <button onClick={() => setShowUpload(true)} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-4 py-2 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors shadow-apple-sm">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             Upload CSV
@@ -1531,6 +1852,29 @@ function TeamsTab() {
           </button>
         </div>
       </div>
+
+      <div className="mb-6 bg-white border border-apple-gray-2 rounded-apple-lg p-4 shadow-apple-sm">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-bold text-apple-text">Team Groups</h3>
+          <button onClick={() => setShowCreateGroup(true)} className="text-xs font-semibold text-apple-blue hover:underline">Add group</button>
+        </div>
+        {groups.length === 0 ? (
+          <p className="text-sm text-apple-text-3">No groups yet. Create one to assign teams and restrict quiz access.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {groups.map(g => (
+              <div key={g.id} className="inline-flex items-center gap-2 bg-apple-gray border border-apple-gray-2 rounded-apple px-3 py-1.5">
+                <span className="text-sm font-semibold text-apple-text">{g.name}</span>
+                <span className="text-xs text-apple-text-3">{g.teamCount} team{g.teamCount !== 1 ? 's' : ''}</span>
+                <button onClick={() => deleteGroup(g)} className="text-apple-text-3 hover:text-apple-red" title="Delete group">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-16"><Spinner size={8} /></div>
       ) : teams.length === 0 ? (
@@ -1544,6 +1888,7 @@ function TeamsTab() {
             <thead>
               <tr className="bg-apple-gray border-b border-apple-gray-2">
                 <th className="text-left px-5 py-3 text-xs font-semibold text-apple-text-2 uppercase tracking-wide">Team Name</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-apple-text-2 uppercase tracking-wide hidden md:table-cell">Group</th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-apple-text-2 uppercase tracking-wide">Score</th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-apple-text-2 uppercase tracking-wide hidden sm:table-cell">Correct</th>
                 <th className="text-right px-5 py-3 text-xs font-semibold text-apple-text-2 uppercase tracking-wide hidden sm:table-cell">Attempted</th>
@@ -1562,6 +1907,17 @@ function TeamsTab() {
                         <p className="text-xs text-apple-text-3 font-mono">#{team.id}</p>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-5 py-3.5 hidden md:table-cell min-w-[160px]">
+                    <SearchableSelect
+                      value={team.groupId ? String(team.groupId) : '__none__'}
+                      onChange={(v) => setTeamGroup(team, v)}
+                      options={groupSelectOptions}
+                      disabled={!!updatingGroup[team.id]}
+                      placeholder="No group"
+                      searchPlaceholder="Search groups…"
+                      className="min-w-[140px]"
+                    />
                   </td>
                   <td className="px-5 py-3.5 text-right"><span className="text-sm font-bold font-mono text-apple-blue">{team.total_score || 0}</span></td>
                   <td className="px-5 py-3.5 text-right hidden sm:table-cell"><span className="text-sm text-apple-green font-semibold">{team.correct_count || 0}</span></td>

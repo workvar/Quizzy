@@ -8,15 +8,25 @@ export async function POST(request, { params }) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const quizId = parseInt(params.id);
+  const quiz = await prisma.quiz.findUnique({
+    where: { id: quizId },
+    include: { teamGroups: { select: { groupId: true } } },
+  });
+  if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
+  if (quiz.isDisabled) {
+    return NextResponse.json({ error: 'Enable the quiz before activating it for live' }, { status: 400 });
+  }
 
-  await prisma.$transaction([
-    prisma.quiz.updateMany({ data: { isActive: false } }),
-    prisma.quiz.update({ where: { id: quizId }, data: { isActive: true } }),
-  ]);
+  // Allow multiple active quizzes so different team groups can run in parallel.
+  // Live broadcast still focuses on the quiz being activated.
+  await prisma.quiz.update({ where: { id: quizId }, data: { isActive: true } });
 
-  const quiz = await prisma.quiz.findUnique({ where: { id: quizId } });
+  const groupIds = quiz.teamGroups.map(tg => tg.groupId);
   const teams = await prisma.team.findMany({
-    where: { isBanned: false },
+    where: {
+      isBanned: false,
+      ...(groupIds.length ? { groupId: { in: groupIds } } : {}),
+    },
     select: { id: true, name: true },
   });
 

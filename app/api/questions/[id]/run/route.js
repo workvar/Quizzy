@@ -2,13 +2,11 @@ import { NextResponse } from 'next/server';
 import { requireTeam } from '@/lib/session';
 import prisma from '@/lib/prisma';
 import { runTestCases } from '@/lib/execute-code';
+import { assertTeamCanAccessQuestion } from '@/lib/team-groups';
 
 export async function POST(request, { params }) {
   const session = await requireTeam();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const team = await prisma.team.findUnique({ where: { id: session.teamId } });
-  if (!team || team.isBanned) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
   const { code, language } = await request.json();
   const qid = parseInt(params.id);
@@ -22,6 +20,10 @@ export async function POST(request, { params }) {
     },
   });
   if (!question || !question.isReleased) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const access = await assertTeamCanAccessQuestion(session.teamId, question);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
+
   if (question.type !== 'CODING') return NextResponse.json({ error: 'Not a coding question' }, { status: 400 });
 
   let allowedLanguages;

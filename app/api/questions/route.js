@@ -1,17 +1,22 @@
 import { NextResponse } from 'next/server';
 import { requireTeam } from '@/lib/session';
 import prisma from '@/lib/prisma';
+import { getAccessibleActiveQuizzes } from '@/lib/team-groups';
 
 export async function GET() {
   const session = await requireTeam();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const activeQuiz = await prisma.quiz.findFirst({ where: { isActive: true } });
-  if (!activeQuiz) return NextResponse.json([]);
+  const { team, quizzes } = await getAccessibleActiveQuizzes(session.teamId);
+  if (!team) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+  if (!quizzes.length) return NextResponse.json([]);
+
+  const quizIds = quizzes.map(q => q.id);
+  const quizTitleById = Object.fromEntries(quizzes.map(q => [q.id, q.title]));
 
   const questions = await prisma.question.findMany({
     where: {
-      quizId: activeQuiz.id,
+      quizId: { in: quizIds },
       isReleased: true,
       OR: [
         { sectionId: null },
@@ -19,7 +24,7 @@ export async function GET() {
       ],
     },
     include: { section: { select: { id: true, name: true } } },
-    orderBy: [{ orderIndex: 'asc' }, { id: 'asc' }],
+    orderBy: [{ quizId: 'asc' }, { orderIndex: 'asc' }, { id: 'asc' }],
   });
 
   const answers = await prisma.answer.findMany({ where: { teamId: session.teamId } });
@@ -28,6 +33,8 @@ export async function GET() {
   return NextResponse.json(questions.map(q => ({
     id: q.id,
     title: q.title,
+    quizId: q.quizId,
+    quizTitle: quizTitleById[q.quizId] || null,
     isMultiAnswer: q.isMultiAnswer,
     sectionId: q.sectionId,
     sectionName: q.section?.name ?? null,
