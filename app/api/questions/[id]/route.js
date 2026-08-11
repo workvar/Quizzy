@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireTeam } from '@/lib/session';
 import prisma from '@/lib/prisma';
+import { assertTeamCanAccessQuestion } from '@/lib/team-groups';
 
 export async function GET(request, { params }) {
   const session = await requireTeam();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const team = await prisma.team.findUnique({ where: { id: session.teamId } });
-  if (!team || team.isBanned) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
   const qid = parseInt(params.id);
   const question = await prisma.question.findUnique({
@@ -19,7 +17,9 @@ export async function GET(request, { params }) {
     },
   });
   if (!question || !question.isReleased) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (question.quiz.isDisabled) return NextResponse.json({ error: 'Quiz is currently disabled' }, { status: 403 });
+
+  const access = await assertTeamCanAccessQuestion(session.teamId, question);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   const answer = await prisma.answer.findUnique({
     where: { teamId_questionId: { teamId: session.teamId, questionId: qid } },

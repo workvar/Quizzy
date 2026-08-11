@@ -4,13 +4,11 @@ import prisma from '@/lib/prisma';
 import { emitToAll, getLiveState, updateLiveState } from '@/lib/socket-emitter';
 import { runTestCases } from '@/lib/execute-code';
 import { isContestClosedForSubmit } from '@/lib/settings';
+import { assertTeamCanAccessQuestion } from '@/lib/team-groups';
 
 export async function POST(request, { params }) {
   const session = await requireTeam();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const team = await prisma.team.findUnique({ where: { id: session.teamId } });
-  if (!team || team.isBanned) return NextResponse.json({ error: 'Access denied' }, { status: 403 });
 
   if (await isContestClosedForSubmit()) {
     return NextResponse.json({ error: 'Contest has ended. Submissions are closed.' }, { status: 403 });
@@ -24,6 +22,9 @@ export async function POST(request, { params }) {
     include: { quiz: true, testCases: { orderBy: { orderIndex: 'asc' } } },
   });
   if (!question || !question.isReleased) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+
+  const access = await assertTeamCanAccessQuestion(session.teamId, question);
+  if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
   // Check timer expiry
   if (question.quiz.timeLimitSeconds && question.releasedAt) {

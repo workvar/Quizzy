@@ -8,7 +8,10 @@ export async function GET() {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const quizzes = await prisma.quiz.findMany({
-    include: { _count: { select: { questions: true } } },
+    include: {
+      _count: { select: { questions: true } },
+      teamGroups: { include: { group: { select: { id: true, name: true } } } },
+    },
     orderBy: { createdAt: 'asc' },
   });
 
@@ -22,6 +25,8 @@ export async function GET() {
     timeLimitSeconds: q.timeLimitSeconds,
     createdAt: q.createdAt,
     questionCount: q._count.questions,
+    groupIds: q.teamGroups.map(tg => tg.groupId),
+    groups: q.teamGroups.map(tg => ({ id: tg.group.id, name: tg.group.name })),
   })));
 }
 
@@ -29,10 +34,13 @@ export async function POST(request) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { title, description, pointsPerQuestion, timeLimitSeconds } = await request.json();
+  const { title, description, pointsPerQuestion, timeLimitSeconds, groupIds } = await request.json();
   if (!title?.trim()) return NextResponse.json({ error: 'Title required' }, { status: 400 });
 
   const defaultPoints = parseInt(await getSetting('points_per_question', '10')) || 10;
+  const ids = Array.isArray(groupIds)
+    ? [...new Set(groupIds.map(id => parseInt(id)).filter(n => Number.isFinite(n)))]
+    : [];
 
   const quiz = await prisma.quiz.create({
     data: {
@@ -40,6 +48,9 @@ export async function POST(request) {
       description: description?.trim() || null,
       pointsPerQuestion: parseInt(pointsPerQuestion) || defaultPoints,
       timeLimitSeconds: timeLimitSeconds ? parseInt(timeLimitSeconds) : null,
+      ...(ids.length
+        ? { teamGroups: { create: ids.map(groupId => ({ groupId })) } }
+        : {}),
     },
   });
 

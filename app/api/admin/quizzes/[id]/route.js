@@ -7,7 +7,7 @@ export async function PUT(request, { params }) {
   const session = await requireAdmin();
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const { title, description, pointsPerQuestion, timeLimitSeconds, isDisabled } = await request.json();
+  const { title, description, pointsPerQuestion, timeLimitSeconds, isDisabled, isActive, groupIds } = await request.json();
   const data = {};
   if (title !== undefined) data.title = title.trim();
   if (description !== undefined) data.description = description?.trim() || null;
@@ -16,6 +16,7 @@ export async function PUT(request, { params }) {
     data.timeLimitSeconds = timeLimitSeconds ? parseInt(timeLimitSeconds) : null;
   }
   if (isDisabled !== undefined) data.isDisabled = !!isDisabled;
+  if (isActive !== undefined) data.isActive = !!isActive;
 
   const quizId = parseInt(params.id);
 
@@ -24,9 +25,23 @@ export async function PUT(request, { params }) {
     data.isActive = false;
   }
 
-  const updated = await prisma.quiz.update({ where: { id: quizId }, data });
+  const updated = await prisma.$transaction(async (tx) => {
+    if (groupIds !== undefined) {
+      const ids = Array.isArray(groupIds)
+        ? [...new Set(groupIds.map(id => parseInt(id)).filter(n => Number.isFinite(n)))]
+        : [];
+      await tx.quizTeamGroup.deleteMany({ where: { quizId } });
+      if (ids.length) {
+        await tx.quizTeamGroup.createMany({
+          data: ids.map(groupId => ({ quizId, groupId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+    return tx.quiz.update({ where: { id: quizId }, data });
+  });
 
-  if (data.isDisabled === true) {
+  if (data.isDisabled === true || data.isActive === false) {
     const live = getLiveState();
     if (live.activeQuizId === quizId) {
       updateLiveState({

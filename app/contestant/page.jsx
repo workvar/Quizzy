@@ -27,7 +27,9 @@ function QuestionCard({ q, index }) {
       <div className={`card-hover rounded-apple-lg border p-5 ${cardClass} cursor-pointer h-full`}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-apple-text-3 uppercase tracking-wide mb-1.5">Question {index + 1}</p>
+            <p className="text-xs font-semibold text-apple-text-3 uppercase tracking-wide mb-1.5">
+              {q.quizTitle ? `${q.quizTitle} · ` : ''}Question {index + 1}
+            </p>
             <p className="text-sm font-semibold text-apple-text leading-snug">{preview}</p>
           </div>
           <svg className="w-4 h-4 text-apple-gray-5 group-hover:text-apple-blue transition-colors flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>

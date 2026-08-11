@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 /**
  * Searchable dropdown that replaces native <select>.
  * options: [{ value: string, label: string }]
+ * creatable: when true, show "Add new" if the typed query is not an exact option match
  */
 export default function SearchableSelect({
   value,
@@ -16,6 +17,9 @@ export default function SearchableSelect({
   disabled = false,
   className = '',
   emptyMessage = 'No matches',
+  creatable = false,
+  onCreate,
+  createLabel = (q) => `Add new: “${q}”`,
 }) {
   const listId = useId();
   const rootRef = useRef(null);
@@ -40,6 +44,16 @@ export default function SearchableSelect({
     return options.filter(o => o.label.toLowerCase().includes(q));
   }, [options, query]);
 
+  const createQuery = query.trim();
+  const showCreate = Boolean(
+    creatable
+    && createQuery
+    && !options.some(o => o.label.toLowerCase() === createQuery.toLowerCase())
+  );
+
+  const itemCount = filtered.length + (showCreate ? 1 : 0);
+  const createIdx = showCreate ? filtered.length : -1;
+
   const updateMenuPos = useCallback(() => {
     const el = rootRef.current;
     if (!el) return;
@@ -51,7 +65,7 @@ export default function SearchableSelect({
       width: rect.width,
       top: openUp ? undefined : rect.bottom + 6,
       bottom: openUp ? window.innerHeight - rect.top + 6 : undefined,
-      maxHeight: Math.min(240, openUp ? rect.top - 12 : spaceBelow - 12),
+      maxHeight: Math.min(280, openUp ? rect.top - 12 : spaceBelow - 12),
     });
   }, []);
 
@@ -78,13 +92,18 @@ export default function SearchableSelect({
     close();
   }, [close, onChange]);
 
+  const chooseCreate = useCallback(() => {
+    if (!createQuery) return;
+    onCreate?.(createQuery);
+    close();
+  }, [close, createQuery, onCreate]);
+
   useEffect(() => {
     if (!open) return;
     updateMenuPos();
     const onScroll = () => updateMenuPos();
     const onResize = () => updateMenuPos();
     window.addEventListener('resize', onResize);
-    // capture scroll from any ancestor (modal overflow)
     window.addEventListener('scroll', onScroll, true);
     return () => {
       window.removeEventListener('resize', onResize);
@@ -105,8 +124,8 @@ export default function SearchableSelect({
 
   useEffect(() => {
     if (!open) return;
-    setHighlight((h) => (filtered.length ? Math.min(h, filtered.length - 1) : 0));
-  }, [filtered, open]);
+    setHighlight((h) => (itemCount ? Math.min(h, itemCount - 1) : 0));
+  }, [itemCount, open]);
 
   useEffect(() => {
     if (!open || !listRef.current) return;
@@ -130,17 +149,21 @@ export default function SearchableSelect({
     }
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlight(h => (filtered.length ? (h + 1) % filtered.length : 0));
+      setHighlight(h => (itemCount ? (h + 1) % itemCount : 0));
       return;
     }
     if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setHighlight(h => (filtered.length ? (h - 1 + filtered.length) % filtered.length : 0));
+      setHighlight(h => (itemCount ? (h - 1 + itemCount) % itemCount : 0));
       return;
     }
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (filtered[highlight]) choose(filtered[highlight]);
+      if (showCreate && highlight === createIdx) {
+        chooseCreate();
+      } else if (filtered[highlight]) {
+        choose(filtered[highlight]);
+      }
     }
   };
 
@@ -177,33 +200,49 @@ export default function SearchableSelect({
         </div>
       </div>
       <ul className="overflow-y-auto py-1" style={{ maxHeight: Math.max(80, (menuPos.maxHeight || 240) - 56) }}>
-        {filtered.length === 0 ? (
+        {filtered.length === 0 && !showCreate ? (
           <li className="px-3 py-2.5 text-sm text-apple-text-3">{emptyMessage}</li>
         ) : (
-          filtered.map((opt, i) => {
-            const isSelected = String(opt.value) === String(value);
-            const isActive = i === highlight;
-            return (
+          <>
+            {filtered.map((opt, i) => {
+              const isSelected = String(opt.value) === String(value);
+              const isActive = i === highlight;
+              return (
+                <li
+                  key={`${opt.value}-${i}`}
+                  data-idx={i}
+                  role="option"
+                  aria-selected={isSelected}
+                  onMouseEnter={() => setHighlight(i)}
+                  onMouseDown={(e) => { e.preventDefault(); choose(opt); }}
+                  className={`flex items-center justify-between gap-2 px-3 py-2 text-sm cursor-pointer transition-colors ${
+                    isActive ? 'bg-blue-50 text-apple-blue' : 'text-apple-text hover:bg-apple-gray'
+                  }`}
+                >
+                  <span className="truncate">{opt.label}</span>
+                  {isSelected && (
+                    <svg className="w-4 h-4 flex-shrink-0 text-apple-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </li>
+              );
+            })}
+            {showCreate && (
               <li
-                key={`${opt.value}-${i}`}
-                data-idx={i}
+                data-idx={createIdx}
                 role="option"
-                aria-selected={isSelected}
-                onMouseEnter={() => setHighlight(i)}
-                onMouseDown={(e) => { e.preventDefault(); choose(opt); }}
-                className={`flex items-center justify-between gap-2 px-3 py-2 text-sm cursor-pointer transition-colors ${
-                  isActive ? 'bg-blue-50 text-apple-blue' : 'text-apple-text hover:bg-apple-gray'
+                aria-selected={false}
+                onMouseEnter={() => setHighlight(createIdx)}
+                onMouseDown={(e) => { e.preventDefault(); chooseCreate(); }}
+                className={`px-3 py-2.5 text-sm cursor-pointer border-t border-apple-gray-2 ${
+                  highlight === createIdx ? 'bg-blue-50 text-apple-blue' : 'text-apple-blue hover:bg-apple-gray'
                 }`}
               >
-                <span className="truncate">{opt.label}</span>
-                {isSelected && (
-                  <svg className="w-4 h-4 flex-shrink-0 text-apple-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden>
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
+                <span className="font-semibold underline-offset-2 hover:underline">{createLabel(createQuery)}</span>
               </li>
-            );
-          })
+            )}
+          </>
         )}
       </ul>
     </div>,
