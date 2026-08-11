@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { SETTING_DEFAULTS, asBool, getSettingsMap } from '@/lib/settings';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const map = await getSettingsMap();
   return NextResponse.json({
