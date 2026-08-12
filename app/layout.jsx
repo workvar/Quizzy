@@ -1,5 +1,6 @@
 import './globals.css';
 import { DialogProvider } from '@/components/DialogProvider';
+import { Footer } from '@/components/Footer';
 import { Plus_Jakarta_Sans, Sora } from 'next/font/google';
 
 const body = Plus_Jakarta_Sans({
@@ -36,8 +37,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className={`${body.variable} ${display.variable}`}>
-      <body className="font-sans antialiased">
-        <DialogProvider>{children}</DialogProvider>
+      <body className="font-sans antialiased flex flex-col min-h-screen">
+        <DialogProvider>
+          <div className="flex-1">{children}</div>
+          <Footer />
+        </DialogProvider>
       </body>
     </html>
   );
