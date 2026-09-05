@@ -286,17 +286,32 @@ function QuestionContent() {
 
   useEffect(() => { loadQuestion(); }, [qid]);
 
-  // Countdown timer
+  // Countdown timer — uses effective remaining from server, then ticks locally
   useEffect(() => {
-    if (!question?.timeLimitSeconds || !question?.releasedAt || result) { setTimeLeft(null); return; }
+    if (!question || result) { setTimeLeft(null); return; }
+    const effectiveLimit = question.timeLimitSeconds;
+    const releasedAt = question.releasedAt;
+    if (question.timeRemaining != null) {
+      // Prefer server-computed remaining (accounts for quiz/section budgets)
+      let remaining = question.timeRemaining;
+      setTimeLeft(remaining);
+      if (remaining <= 0) return;
+      const id = setInterval(() => {
+        remaining -= 1;
+        setTimeLeft(Math.max(0, remaining));
+        if (remaining <= 0) clearInterval(id);
+      }, 1000);
+      return () => clearInterval(id);
+    }
+    if (!effectiveLimit || !releasedAt) { setTimeLeft(null); return; }
     const calc = () => {
-      const elapsed = Math.floor((Date.now() - new Date(question.releasedAt).getTime()) / 1000);
-      return Math.max(0, question.timeLimitSeconds - elapsed);
+      const elapsed = Math.floor((Date.now() - new Date(releasedAt).getTime()) / 1000);
+      return Math.max(0, effectiveLimit - elapsed);
     };
     setTimeLeft(calc());
     const id = setInterval(() => { const rem = calc(); setTimeLeft(rem); if (rem <= 0) clearInterval(id); }, 1000);
     return () => clearInterval(id);
-  }, [question?.id, question?.releasedAt, result]);
+  }, [question?.id, question?.releasedAt, question?.timeLimitSeconds, question?.timeRemaining, result]);
 
   // Auto-submit for MCQ when timer hits 0
   useEffect(() => {
@@ -373,6 +388,16 @@ function QuestionContent() {
               {timeLeft}
             </span>
             <span className={`text-xs font-semibold uppercase tracking-widest ${timerColor} opacity-60`}>{timeLeft === 0 ? "Time's up!" : 'seconds left'}</span>
+            {(question?.timing?.quizRemaining != null || question?.timing?.sectionRemaining != null) && timeLeft > 0 && (
+              <div className="flex gap-2 mt-1 opacity-70">
+                {question.timing.quizRemaining != null && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-apple-text-3">Quiz {question.timing.quizRemaining}s</span>
+                )}
+                {question.timing.sectionRemaining != null && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-apple-text-3">Section {question.timing.sectionRemaining}s</span>
+                )}
+              </div>
+            )}
           </div>
         )}
 

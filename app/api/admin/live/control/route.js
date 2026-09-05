@@ -3,7 +3,33 @@ import { requireAdmin } from '@/lib/session';
 import prisma from '@/lib/prisma';
 import emitter from '@/lib/notifications';
 import { emitToAll, getLiveState, updateLiveState } from '@/lib/socket-emitter';
-import { scheduleAutoSubmit, cancelAutoSubmit } from '@/lib/question-timer';
+import { scheduleQuestionTiming, cancelAutoSubmit } from '@/lib/question-timer';
+import { computeTiming } from '@/lib/time-limits';
+
+function buildQuestionPayload(q, timing) {
+  return {
+    id: q.id,
+    title: q.title,
+    content: q.content,
+    type: q.type,
+    isMultiAnswer: q.isMultiAnswer,
+    sectionName: q.section?.name ?? null,
+    releasedAt: q.releasedAt?.toISOString?.() ?? q.releasedAt ?? null,
+    timeLimitSeconds: timing.effectiveLimitSeconds,
+    questionTimeLimitSeconds: timing.questionLimitSeconds,
+    timing: {
+      enforcement: timing.enforcement,
+      bindingSource: timing.bindingSource,
+      quizLimitSeconds: timing.quizLimitSeconds,
+      sectionLimitSeconds: timing.sectionLimitSeconds,
+      quizSessionStartedAt: q.quiz?.sessionStartedAt?.toISOString?.() ?? q.quiz?.sessionStartedAt ?? null,
+      sectionSessionStartedAt: q.section?.sessionStartedAt?.toISOString?.() ?? q.section?.sessionStartedAt ?? null,
+    },
+    options: q.type === 'MCQ' && q.options
+      ? q.options.map(o => ({ id: o.id, content: o.content }))
+      : [],
+  };
+}
 
 export async function POST(request) {
   const session = await requireAdmin();
@@ -16,27 +42,36 @@ export async function POST(request) {
     if (!questionId) return NextResponse.json({ error: 'questionId required' }, { status: 400 });
     const qid = parseInt(questionId);
 
-    const q = await prisma.question.findUnique({ where: { id: qid }, include: { quiz: true, section: { select: { name: true } } } });
+    const q = await prisma.question.findUnique({
+      where: { id: qid },
+      include: { quiz: true, section: true },
+    });
     if (!q) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     // Block if previous timed question is still open
-    if (q.quiz.timeLimitSeconds) {
-      const activeTimed = await prisma.question.findFirst({
-        where: { quizId: q.quizId, isReleased: true, id: { not: qid }, releasedAt: { not: null } },
-        orderBy: { releasedAt: 'desc' },
+    const activeTimed = await prisma.question.findFirst({
+      where: { quizId: q.quizId, isReleased: true, id: { not: qid }, releasedAt: { not: null } },
+      orderBy: { releasedAt: 'desc' },
+      include: { section: true, quiz: true },
+    });
+    if (activeTimed) {
+      const activeTiming = computeTiming({
+        question: activeTimed,
+        section: activeTimed.section,
+        quiz: activeTimed.quiz || q.quiz,
       });
-      if (activeTimed) {
-        const expireAt = new Date(activeTimed.releasedAt).getTime() + q.quiz.timeLimitSeconds * 1000;
-        if (Date.now() < expireAt) {
-          const [teams, answers] = await Promise.all([
-            prisma.team.count({ where: { isBanned: false } }),
-            prisma.answer.count({ where: { questionId: activeTimed.id } }),
-          ]);
-          const pending = teams - answers;
-          if (pending > 0) {
-            const secsLeft = Math.ceil((expireAt - Date.now()) / 1000);
-            return NextResponse.json({ error: `${pending} team${pending !== 1 ? 's' : ''} haven't submitted (${secsLeft}s left)`, blocked: true }, { status: 409 });
-          }
+      if (activeTiming.effectiveExpiresAt && Date.now() < activeTiming.effectiveExpiresAt) {
+        const [teams, answers] = await Promise.all([
+          prisma.team.count({ where: { isBanned: false } }),
+          prisma.answer.count({ where: { questionId: activeTimed.id } }),
+        ]);
+        const pending = teams - answers;
+        if (pending > 0) {
+          const secsLeft = Math.ceil((activeTiming.effectiveExpiresAt - Date.now()) / 1000);
+          return NextResponse.json({
+            error: `${pending} team${pending !== 1 ? 's' : ''} haven't submitted (${secsLeft}s left)`,
+            blocked: true,
+          }, { status: 409 });
         }
       }
     }
@@ -44,14 +79,10 @@ export async function POST(request) {
     const now = new Date();
     await prisma.question.update({ where: { id: qid }, data: { isReleased: true, releasedAt: now } });
 
-    if (q.quiz.timeLimitSeconds) {
-      scheduleAutoSubmit(qid, q.quiz.timeLimitSeconds * 1000);
-    }
+    const timing = await scheduleQuestionTiming(qid);
 
-    // Contestant SSE notification
     emitter.emit('questionReleased', { type: 'questionReleased', id: qid, title: q.title });
 
-    // Build live question payload
     const options = await prisma.option.findMany({ where: { questionId: qid }, orderBy: { optionOrder: 'asc' } });
     const existingAnswers = await prisma.answer.findMany({
       where: { questionId: qid },
@@ -60,17 +91,20 @@ export async function POST(request) {
     });
     const allTeams = await prisma.team.findMany({ where: { isBanned: false }, select: { id: true, name: true } });
 
-    const questionData = {
-      id: qid,
-      title: q.title,
-      content: q.content,
-      type: q.type,
-      isMultiAnswer: q.isMultiAnswer,
-      sectionName: q.section?.name ?? null,
-      releasedAt: now.toISOString(),
-      timeLimitSeconds: q.quiz.timeLimitSeconds,
-      options: q.type === 'MCQ' ? options.map(o => ({ id: o.id, content: o.content })) : [],
-    };
+    const fresh = await prisma.question.findUnique({
+      where: { id: qid },
+      include: { quiz: true, section: true },
+    });
+    const t = timing || computeTiming({
+      question: { ...fresh, releasedAt: now },
+      section: fresh.section,
+      quiz: fresh.quiz,
+    });
+
+    const questionData = buildQuestionPayload(
+      { ...fresh, options, releasedAt: now },
+      t,
+    );
 
     const fastestAnswers = existingAnswers.map(a => ({
       rank: a.answerRank,
@@ -86,10 +120,13 @@ export async function POST(request) {
       fastestAnswers,
       allTeams,
       submittedTeamIds: existingAnswers.map(a => a.teamId),
+      quizSessionStartedAt: fresh.quiz.sessionStartedAt?.toISOString() ?? null,
+      timeLimitSeconds: fresh.quiz.timeLimitSeconds,
+      timeEnforcement: fresh.quiz.timeEnforcement,
     });
 
     emitToAll('question:show', { question: questionData, fastestAnswers, allTeams, submittedTeamIds: existingAnswers.map(a => a.teamId) });
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, timing: t });
 
   // ─── Unrelease a question ──────────────────────────────────────────────────
   } else if (action === 'unreleaseQuestion') {
@@ -110,7 +147,14 @@ export async function POST(request) {
   } else if (action === 'showQuestion') {
     if (!questionId) return NextResponse.json({ error: 'questionId required' }, { status: 400 });
     const qid = parseInt(questionId);
-    const question = await prisma.question.findUnique({ where: { id: qid }, include: { options: { orderBy: { optionOrder: 'asc' } }, quiz: true, section: { select: { name: true } } } });
+    const question = await prisma.question.findUnique({
+      where: { id: qid },
+      include: {
+        options: { orderBy: { optionOrder: 'asc' } },
+        quiz: true,
+        section: true,
+      },
+    });
     if (!question) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
     const existingAnswers = await prisma.answer.findMany({
@@ -120,25 +164,26 @@ export async function POST(request) {
     });
     const allTeams = await prisma.team.findMany({ where: { isBanned: false }, select: { id: true, name: true } });
 
-    const questionData = {
-      id: qid,
-      title: question.title,
-      content: question.content,
-      type: question.type,
-      isMultiAnswer: question.isMultiAnswer,
-      sectionName: question.section?.name ?? null,
-      releasedAt: question.releasedAt?.toISOString() ?? null,
-      timeLimitSeconds: question.quiz.timeLimitSeconds,
-      options: question.type === 'MCQ' ? question.options.map(o => ({ id: o.id, content: o.content })) : [],
-    };
+    const timing = computeTiming({
+      question,
+      section: question.section,
+      quiz: question.quiz,
+    });
+    const questionData = buildQuestionPayload(question, timing);
 
     updateLiveState({
       currentQuestion: questionData,
       showResults: false,
       resultStats: null,
-      fastestAnswers: existingAnswers.map(a => ({ rank: a.answerRank, teamName: a.team.name, isCorrect: a.isCorrect, submittedAt: a.submittedAt })),
+      fastestAnswers: existingAnswers.map(a => ({
+        rank: a.answerRank,
+        teamName: a.team.name,
+        isCorrect: a.isCorrect,
+        submittedAt: a.submittedAt,
+      })),
       allTeams,
       submittedTeamIds: existingAnswers.map(a => a.teamId),
+      quizSessionStartedAt: question.quiz.sessionStartedAt?.toISOString() ?? null,
     });
 
     emitToAll('question:show', {

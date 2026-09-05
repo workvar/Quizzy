@@ -3,7 +3,8 @@ import { requireAdmin } from '@/lib/session';
 import prisma from '@/lib/prisma';
 import emitter from '@/lib/notifications';
 import { emitToAll, getLiveState, updateLiveState } from '@/lib/socket-emitter';
-import { scheduleAutoSubmit, cancelAutoSubmit } from '@/lib/question-timer';
+import { scheduleQuestionTiming, cancelAutoSubmit } from '@/lib/question-timer';
+import { computeTiming } from '@/lib/time-limits';
 
 export async function PUT(request, { params }) {
   const session = await requireAdmin();
@@ -14,16 +15,14 @@ export async function PUT(request, { params }) {
 
   const before = await prisma.question.findUnique({
     where: { id: qid },
-    include: { quiz: true, section: { select: { timeLimitSeconds: true } } },
+    include: { quiz: true, section: true },
   });
   if (!before) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const isReleasing = body.isReleased === true && !before.isReleased;
 
-  const effectiveTimeLimit = before.timeLimitSeconds ?? before.section?.timeLimitSeconds ?? before.quiz.timeLimitSeconds ?? null;
-
   // Block release if timed and a previous question's timer is still running
-  if (isReleasing && before.quiz.timeLimitSeconds) {
+  if (isReleasing) {
     const activeTimed = await prisma.question.findFirst({
       where: {
         quizId: before.quizId,
@@ -32,14 +31,16 @@ export async function PUT(request, { params }) {
         releasedAt: { not: null },
       },
       orderBy: { releasedAt: 'desc' },
-      include: { section: { select: { timeLimitSeconds: true } } },
+      include: { section: true, quiz: true },
     });
     if (activeTimed) {
-      const activeLimit = activeTimed.timeLimitSeconds ?? activeTimed.section?.timeLimitSeconds ?? before.quiz.timeLimitSeconds ?? null;
-      const expireAt = new Date(activeTimed.releasedAt).getTime() + (activeLimit ?? before.quiz.timeLimitSeconds) * 1000;
-      if (Date.now() < expireAt) {
-        const secsLeft = Math.ceil((expireAt - Date.now()) / 1000);
-        // Count unsubmitted non-banned teams
+      const activeTiming = computeTiming({
+        question: activeTimed,
+        section: activeTimed.section,
+        quiz: activeTimed.quiz || before.quiz,
+      });
+      if (activeTiming.effectiveExpiresAt && Date.now() < activeTiming.effectiveExpiresAt) {
+        const secsLeft = Math.ceil((activeTiming.effectiveExpiresAt - Date.now()) / 1000);
         const [teams, answers] = await Promise.all([
           prisma.team.count({ where: { isBanned: false } }),
           prisma.answer.count({ where: { questionId: activeTimed.id } }),
@@ -62,7 +63,12 @@ export async function PUT(request, { params }) {
   if (body.title !== undefined) data.title = body.title;
   if (body.content !== undefined) data.content = body.content;
   if (body.isMultiAnswer !== undefined) data.isMultiAnswer = !!body.isMultiAnswer;
-  if (body.timeLimitSeconds !== undefined) data.timeLimitSeconds = body.timeLimitSeconds ? parseInt(body.timeLimitSeconds) : null;
+  if (body.timeLimitSeconds !== undefined) {
+    data.timeLimitSeconds = body.timeLimitSeconds ? parseInt(body.timeLimitSeconds) : null;
+  }
+  if (body.sectionId !== undefined) {
+    data.sectionId = body.sectionId ? parseInt(body.sectionId) : null;
+  }
   if (body.starterCode !== undefined) data.starterCode = body.starterCode ? JSON.stringify(body.starterCode) : null;
   if (body.allowedLanguages !== undefined) data.allowedLanguages = JSON.stringify(body.allowedLanguages);
 
@@ -93,15 +99,53 @@ export async function PUT(request, { params }) {
 
   // Handle release → schedule auto-submit timer, notify live screen + contestants
   if (isReleasing) {
-    if (effectiveTimeLimit) {
-      scheduleAutoSubmit(qid, effectiveTimeLimit * 1000);
-    }
+    const timing = await scheduleQuestionTiming(qid);
 
-    // Contestant SSE notification
     emitter.emit('questionReleased', { type: 'questionReleased', id: after.id, title: after.title });
 
+    // Update live state if this quiz is active on the live screen
+    const live = getLiveState();
+    if (live.activeQuizId === before.quizId) {
+      const fresh = await prisma.question.findUnique({
+        where: { id: qid },
+        include: {
+          options: { orderBy: { optionOrder: 'asc' } },
+          quiz: true,
+          section: true,
+        },
+      });
+      if (fresh) {
+        const t = timing || computeTiming({ question: fresh, section: fresh.section, quiz: fresh.quiz });
+        const questionData = {
+          id: qid,
+          title: fresh.title,
+          content: fresh.content,
+          type: fresh.type,
+          isMultiAnswer: fresh.isMultiAnswer,
+          sectionName: fresh.section?.name ?? null,
+          releasedAt: fresh.releasedAt?.toISOString() ?? null,
+          timeLimitSeconds: t.effectiveLimitSeconds,
+          questionTimeLimitSeconds: t.questionLimitSeconds,
+          timing: {
+            enforcement: t.enforcement,
+            bindingSource: t.bindingSource,
+            quizLimitSeconds: t.quizLimitSeconds,
+            sectionLimitSeconds: t.sectionLimitSeconds,
+            quizSessionStartedAt: fresh.quiz.sessionStartedAt?.toISOString() ?? null,
+            sectionSessionStartedAt: fresh.section?.sessionStartedAt?.toISOString() ?? null,
+          },
+          options: fresh.type === 'MCQ' ? fresh.options.map(o => ({ id: o.id, content: o.content })) : [],
+        };
+        updateLiveState({
+          currentQuestion: questionData,
+          showResults: false,
+          resultStats: null,
+          quizSessionStartedAt: fresh.quiz.sessionStartedAt?.toISOString() ?? live.quizSessionStartedAt,
+        });
+        emitToAll('question:show', { question: questionData, fastestAnswers: [], allTeams: live.allTeams, submittedTeamIds: [] });
+      }
+    }
   } else if (before.isReleased && !after.isReleased) {
-    // Unreleasing — cancel any pending timer
     cancelAutoSubmit(qid);
     emitter.emit('questionUnreleased', { type: 'questionUnreleased', id: after.id });
   }

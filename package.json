@@ -10,6 +10,8 @@
     "db:push": "prisma db push",
     "db:seed": "node prisma/seed.js",
     "db:studio": "prisma studio",
+    "db:migrate-time-limits": "node prisma/migrate-time-limits.js",
+    "check:time-limits": "node scripts/check-time-limits.js",
     "postinstall": "prisma generate"
   },
   "dependencies": {

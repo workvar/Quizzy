@@ -81,7 +81,7 @@ export default function LiveScreen() {
       if (rem <= 0) clearInterval(id);
     }, 1000);
     return () => clearInterval(id);
-  }, [state.currentQuestion?.id, state.currentQuestion?.releasedAt]);
+  }, [state.currentQuestion?.id, state.currentQuestion?.releasedAt, state.currentQuestion?.timeLimitSeconds]);
 
   useEffect(() => {
     let socket;

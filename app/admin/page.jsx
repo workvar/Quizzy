@@ -7,7 +7,71 @@ import SearchableSelect from '@/components/SearchableSelect';
 import { useConfirm } from '@/components/DialogProvider';
 import { LogoMark } from '@/components/Logo';
 import AppHeader from '@/components/AppHeader';
+import {
+  TIME_ENFORCEMENT_OPTIONS,
+  enforcementShortLabel,
+  enforcementHint,
+  secondsToMinutesInput,
+  minutesInputToSeconds,
+} from '@/lib/time-limits';
 
+/** Shared quiz timing fields — plain language, minutes for totals. */
+function QuizTimingFields({
+  quizMinutes,
+  setQuizMinutes,
+  questionSeconds,
+  setQuestionSeconds,
+  timeEnforcement,
+  setTimeEnforcement,
+}) {
+  return (
+    <div className="rounded-apple border border-apple-gray-2 bg-apple-gray/40 p-3 space-y-3">
+      <p className="text-xs font-semibold text-apple-text uppercase tracking-wide">Time limits</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Whole quiz (minutes)</label>
+          <input
+            type="number"
+            min="0.1"
+            step="any"
+            max="1440"
+            value={quizMinutes}
+            onChange={e => setQuizMinutes(e.target.value)}
+            placeholder="e.g. 60"
+            className="w-full px-4 py-2.5 bg-white border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all"
+          />
+          <p className="text-[11px] text-apple-text-3 mt-1">Leave blank for no overall quiz timer</p>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Each question (seconds)</label>
+          <input
+            type="number"
+            min="1"
+            max="7200"
+            value={questionSeconds}
+            onChange={e => setQuestionSeconds(e.target.value)}
+            placeholder="e.g. 60"
+            className="w-full px-4 py-2.5 bg-white border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all"
+          />
+          <p className="text-[11px] text-apple-text-3 mt-1">Default for every question (can override per question)</p>
+        </div>
+      </div>
+      <div>
+        <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">What cuts people off?</label>
+        <select
+          value={timeEnforcement}
+          onChange={e => setTimeEnforcement(e.target.value)}
+          className="w-full px-4 py-2.5 bg-white border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all"
+        >
+          {TIME_ENFORCEMENT_OPTIONS.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <p className="text-[11px] text-apple-text-3 mt-1.5 leading-relaxed">{enforcementHint(timeEnforcement)}</p>
+      </div>
+    </div>
+  );
+}
 /* ─── Markdown renderer ─── */
 function renderMd(text) {
   if (!text) return '';
@@ -213,8 +277,8 @@ function AddQuestionModal({ quizId, sections, onClose, onAdded }) {
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Time Limit (sec, optional)</label>
-            <input type="number" min="5" max="600" value={questionTimeLimit} onChange={e => setQuestionTimeLimit(e.target.value)} placeholder="e.g. 60 (overrides section/quiz)" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
+            <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">This question’s time (sec)</label>
+            <input type="number" min="1" max="7200" value={questionTimeLimit} onChange={e => setQuestionTimeLimit(e.target.value)} placeholder="Blank = use quiz/section default" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
           </div>
         </div>
 
@@ -454,7 +518,9 @@ function CreateQuizModal({ onClose, onCreated }) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [pointsPerQuestion, setPointsPerQuestion] = useState('10');
-  const [timeLimitSeconds, setTimeLimitSeconds] = useState('');
+  const [quizMinutes, setQuizMinutes] = useState('');
+  const [questionSeconds, setQuestionSeconds] = useState('');
+  const [timeEnforcement, setTimeEnforcement] = useState('QUESTION');
   const [groups, setGroups] = useState([]);
   const [groupIds, setGroupIds] = useState([]);
   const [saving, setSaving] = useState(false);
@@ -485,7 +551,9 @@ function CreateQuizModal({ onClose, onCreated }) {
           title: title.trim(),
           description: description.trim(),
           pointsPerQuestion: parseInt(pointsPerQuestion) || 10,
-          timeLimitSeconds: timeLimitSeconds ? parseInt(timeLimitSeconds) : null,
+          timeLimitSeconds: minutesInputToSeconds(quizMinutes),
+          defaultQuestionTimeSeconds: questionSeconds ? parseInt(questionSeconds) : null,
+          timeEnforcement,
           groupIds,
         }),
       });
@@ -509,16 +577,18 @@ function CreateQuizModal({ onClose, onCreated }) {
           <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Description (optional)</label>
           <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} placeholder="Short description..." className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all resize-none" />
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Points Per Question</label>
-            <input type="number" min="1" max="1000" value={pointsPerQuestion} onChange={e => setPointsPerQuestion(e.target.value)} className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Time Limit (sec, optional)</label>
-            <input type="number" min="5" max="600" value={timeLimitSeconds} onChange={e => setTimeLimitSeconds(e.target.value)} placeholder="e.g. 60" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
-          </div>
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Points Per Question</label>
+          <input type="number" min="1" max="1000" value={pointsPerQuestion} onChange={e => setPointsPerQuestion(e.target.value)} className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
         </div>
+        <QuizTimingFields
+          quizMinutes={quizMinutes}
+          setQuizMinutes={setQuizMinutes}
+          questionSeconds={questionSeconds}
+          setQuestionSeconds={setQuestionSeconds}
+          timeEnforcement={timeEnforcement}
+          setTimeEnforcement={setTimeEnforcement}
+        />
         <div>
           <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Team Groups (optional)</label>
           <p className="text-xs text-apple-text-3 mb-2">Leave empty to allow all teams. Select groups to restrict who can attempt this quiz.</p>
@@ -540,6 +610,76 @@ function CreateQuizModal({ onClose, onCreated }) {
           <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
           <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
             {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Quiz'}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function EditQuizTimingModal({ quiz, onClose, onSaved }) {
+  const [title, setTitle] = useState(quiz.title || '');
+  const [description, setDescription] = useState(quiz.description || '');
+  const [pointsPerQuestion, setPointsPerQuestion] = useState(String(quiz.pointsPerQuestion || 10));
+  const [quizMinutes, setQuizMinutes] = useState(secondsToMinutesInput(quiz.timeLimitSeconds));
+  const [questionSeconds, setQuestionSeconds] = useState(quiz.defaultQuestionTimeSeconds?.toString() || '');
+  const [timeEnforcement, setTimeEnforcement] = useState(quiz.timeEnforcement || 'QUESTION');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async () => {
+    setError('');
+    if (!title.trim()) { setError('Title is required'); return; }
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/quizzes/${quiz.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim(),
+          pointsPerQuestion: parseInt(pointsPerQuestion) || 10,
+          timeLimitSeconds: minutesInputToSeconds(quizMinutes),
+          defaultQuestionTimeSeconds: questionSeconds ? parseInt(questionSeconds) : null,
+          timeEnforcement,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || 'Failed'); setSaving(false); return; }
+      onSaved();
+      onClose();
+    } catch { setError('Network error'); }
+    setSaving(false);
+  };
+
+  return (
+    <Modal title="Edit Quiz" onClose={onClose}>
+      <div className="space-y-4">
+        {error && <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-apple px-4 py-2.5">{error}</div>}
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Quiz Title</label>
+          <input value={title} onChange={e => setTitle(e.target.value)} className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Description (optional)</label>
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={2} className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all resize-none" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Points Per Question</label>
+          <input type="number" min="1" max="1000" value={pointsPerQuestion} onChange={e => setPointsPerQuestion(e.target.value)} className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
+        </div>
+        <QuizTimingFields
+          quizMinutes={quizMinutes}
+          setQuizMinutes={setQuizMinutes}
+          questionSeconds={questionSeconds}
+          setQuestionSeconds={setQuestionSeconds}
+          timeEnforcement={timeEnforcement}
+          setTimeEnforcement={setTimeEnforcement}
+        />
+        <div className="flex justify-end gap-3 pt-2">
+          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
+          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
+            {saving && <Spinner size={4} />}{saving ? 'Saving…' : 'Save'}
           </button>
         </div>
       </div>
@@ -752,18 +892,29 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
   const confirm = useConfirm();
   const [newName, setNewName] = useState('');
   const [newTimeLimit, setNewTimeLimit] = useState('');
+  const [newDefaultQTime, setNewDefaultQTime] = useState('');
   const [adding, setAdding] = useState(false);
   const [renamingId, setRenamingId] = useState(null);
   const [renamingValue, setRenamingValue] = useState('');
   const [timeLimitValue, setTimeLimitValue] = useState('');
+  const [defaultQTimeValue, setDefaultQTimeValue] = useState('');
   const [busy, setBusy] = useState({});
 
   const addSection = async () => {
     if (!newName.trim()) return;
     setAdding(true);
     try {
-      await fetch('/api/admin/sections', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quizId, name: newName.trim(), timeLimitSeconds: newTimeLimit ? parseInt(newTimeLimit) : null }) });
-      setNewName(''); setNewTimeLimit('');
+      await fetch('/api/admin/sections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          quizId,
+          name: newName.trim(),
+          timeLimitSeconds: minutesInputToSeconds(newTimeLimit),
+          defaultQuestionTimeSeconds: newDefaultQTime ? parseInt(newDefaultQTime) : null,
+        }),
+      });
+      setNewName(''); setNewTimeLimit(''); setNewDefaultQTime('');
       onChange();
     } catch {}
     setAdding(false);
@@ -773,7 +924,15 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
     if (!renamingValue.trim()) return;
     setBusy(prev => ({ ...prev, [id]: true }));
     try {
-      await fetch(`/api/admin/sections/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: renamingValue.trim(), timeLimitSeconds: timeLimitValue ? parseInt(timeLimitValue) : null }) });
+      await fetch(`/api/admin/sections/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: renamingValue.trim(),
+          timeLimitSeconds: minutesInputToSeconds(timeLimitValue),
+          defaultQuestionTimeSeconds: defaultQTimeValue ? parseInt(defaultQTimeValue) : null,
+        }),
+      });
       setRenamingId(null);
       onChange();
     } catch {}
@@ -805,6 +964,21 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
     setBusy(prev => ({ ...prev, [`del-${id}`]: false }));
   };
 
+  const formatSec = (s) => {
+    if (!s) return null;
+    if (s < 60) return `${s}s`;
+    const m = Math.floor(s / 60);
+    const r = s % 60;
+    return r ? `${m}m ${r}s` : `${m}m`;
+  };
+
+  const openEdit = (s) => {
+    setRenamingId(s.id);
+    setRenamingValue(s.name);
+    setTimeLimitValue(secondsToMinutesInput(s.timeLimitSeconds));
+    setDefaultQTimeValue(s.defaultQuestionTimeSeconds?.toString() || '');
+  };
+
   return (
     <Modal title="Manage Sections" onClose={onClose}>
       <div className="space-y-4">
@@ -817,8 +991,17 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
                 {renamingId === s.id ? (
                   <div className="flex-1 space-y-2">
                     <input autoFocus value={renamingValue} onChange={e => setRenamingValue(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') renameSection(s.id); if (e.key === 'Escape') setRenamingId(null); }} className="w-full text-sm px-2 py-1.5 border border-apple-gray-3 rounded-apple focus:outline-none focus:ring-2 focus:ring-apple-blue" placeholder="Section name" />
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[10px] font-semibold text-apple-text-3 uppercase mb-0.5">Section time (min)</label>
+                        <input type="number" value={timeLimitValue} onChange={e => setTimeLimitValue(e.target.value)} min="0.1" step="any" max="1440" placeholder="e.g. 15" className="w-full text-xs px-2 py-1.5 border border-apple-gray-3 rounded-apple focus:outline-none focus:ring-1 focus:ring-apple-blue" />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-semibold text-apple-text-3 uppercase mb-0.5">Per question (sec)</label>
+                        <input type="number" value={defaultQTimeValue} onChange={e => setDefaultQTimeValue(e.target.value)} min="1" max="7200" placeholder="e.g. 60" className="w-full text-xs px-2 py-1.5 border border-apple-gray-3 rounded-apple focus:outline-none focus:ring-1 focus:ring-apple-blue" />
+                      </div>
+                    </div>
                     <div className="flex items-center gap-2">
-                      <input type="number" value={timeLimitValue} onChange={e => setTimeLimitValue(e.target.value)} min="5" max="600" placeholder="Time limit (sec, optional)" className="flex-1 text-xs px-2 py-1.5 border border-apple-gray-3 rounded-apple focus:outline-none focus:ring-1 focus:ring-apple-blue" />
                       <button onClick={() => renameSection(s.id)} disabled={busy[s.id]} className="text-xs font-semibold text-white bg-apple-blue px-3 py-1.5 rounded-apple hover:bg-brand-orange-deep transition-colors">Save</button>
                       <button onClick={() => setRenamingId(null)} className="text-xs text-apple-text-3 hover:text-apple-text">Cancel</button>
                     </div>
@@ -827,11 +1010,15 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
                   <>
                     <div className="flex-1 min-w-0">
                       <span className="text-sm font-medium text-apple-text block">{s.name}</span>
-                      <span className="text-xs text-apple-text-3">{s.questionCount} q{s.timeLimitSeconds ? ` · ${s.timeLimitSeconds}s limit` : ''}</span>
+                      <span className="text-xs text-apple-text-3">
+                        {s.questionCount} question{s.questionCount !== 1 ? 's' : ''}
+                        {s.timeLimitSeconds ? ` · section ${formatSec(s.timeLimitSeconds)}` : ''}
+                        {s.defaultQuestionTimeSeconds ? ` · ${s.defaultQuestionTimeSeconds}s per question` : ''}
+                      </span>
                     </div>
                     <button onClick={() => releaseAllInSection(s.id, true)} disabled={busy[`release-${s.id}`]} className="text-xs font-semibold text-apple-green hover:underline whitespace-nowrap" title="Release all questions in section">Release All</button>
                     <button onClick={() => releaseAllInSection(s.id, false)} disabled={busy[`release-${s.id}`]} className="text-xs font-semibold text-apple-text-3 hover:text-apple-red hover:underline whitespace-nowrap" title="Unrelease all">Hide All</button>
-                    <button onClick={() => { setRenamingId(s.id); setRenamingValue(s.name); setTimeLimitValue(s.timeLimitSeconds?.toString() || ''); }} className="p-1 text-apple-text-3 hover:text-apple-blue transition-colors" title="Rename">
+                    <button onClick={() => openEdit(s)} className="p-1 text-apple-text-3 hover:text-apple-blue transition-colors" title="Edit">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
                     </button>
                     <button onClick={() => deleteSection(s.id, s.name)} disabled={busy[`del-${s.id}`]} className="p-1 text-apple-text-3 hover:text-apple-red transition-colors" title="Delete section">
@@ -844,14 +1031,21 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
           </div>
         )}
         <div className="pt-2 border-t border-apple-gray-2 space-y-2">
+          <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSection()} placeholder="New section name…" className="w-full px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
           <div className="flex gap-2">
-            <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSection()} placeholder="New section name…" className="flex-1 px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
-            <input type="number" min="5" max="600" value={newTimeLimit} onChange={e => setNewTimeLimit(e.target.value)} placeholder="Sec" className="w-20 px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" title="Section time limit (seconds)" />
-            <button onClick={addSection} disabled={!newName.trim() || adding} className="px-4 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-1.5">
+            <div className="flex-1">
+              <label className="block text-[10px] font-semibold text-apple-text-3 uppercase mb-0.5">Section time (min)</label>
+              <input type="number" min="0.1" step="any" max="1440" value={newTimeLimit} onChange={e => setNewTimeLimit(e.target.value)} placeholder="e.g. 15" className="w-full px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
+            </div>
+            <div className="flex-1">
+              <label className="block text-[10px] font-semibold text-apple-text-3 uppercase mb-0.5">Per question (sec)</label>
+              <input type="number" min="1" max="7200" value={newDefaultQTime} onChange={e => setNewDefaultQTime(e.target.value)} placeholder="e.g. 60" className="w-full px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
+            </div>
+            <button onClick={addSection} disabled={!newName.trim() || adding} className="self-end px-4 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-1.5">
               {adding && <Spinner size={3} />}Add
             </button>
           </div>
-          <p className="text-xs text-apple-text-3">Optional section time limit in seconds (overrides quiz default for questions in this section)</p>
+          <p className="text-xs text-apple-text-3">Section time = how long this section can run in total. Per question = default timer for questions here. What actually cuts people off is chosen on the quiz (“What cuts people off?”).</p>
         </div>
       </div>
     </Modal>
@@ -958,8 +1152,8 @@ function EditQuestionModal({ question, sections, onClose, onSaved }) {
             </div>
           )}
           <div>
-            <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">Time Limit (sec)</label>
-            <input type="number" min="5" max="600" value={timeLimitSeconds} onChange={e => setTimeLimitSeconds(e.target.value)} placeholder="e.g. 60 (optional)" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
+            <label className="block text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-1.5">This question’s time (sec)</label>
+            <input type="number" min="1" max="7200" value={timeLimitSeconds} onChange={e => setTimeLimitSeconds(e.target.value)} placeholder="Blank = use quiz/section default" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
           </div>
         </div>
 
@@ -1300,6 +1494,7 @@ function QuizzesTab() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [assignQuiz, setAssignQuiz] = useState(null);
+  const [editQuiz, setEditQuiz] = useState(null);
   const [activating, setActivating] = useState({});
   const [deleting, setDeleting] = useState({});
   const [selectedQuiz, setSelectedQuiz] = useState(null);
@@ -1390,6 +1585,7 @@ function QuizzesTab() {
     <div>
       {showCreate && <CreateQuizModal onClose={() => setShowCreate(false)} onCreated={loadQuizzes} />}
       {assignQuiz && <AssignGroupsModal quiz={assignQuiz} onClose={() => setAssignQuiz(null)} onSaved={loadQuizzes} />}
+      {editQuiz && <EditQuizTimingModal quiz={editQuiz} onClose={() => setEditQuiz(null)} onSaved={loadQuizzes} />}
 
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -1422,6 +1618,24 @@ function QuizzesTab() {
                   {quiz.description && <p className="text-sm text-apple-text-2 mb-2">{quiz.description}</p>}
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="text-xs text-apple-text-3">{quiz.questionCount} question{quiz.questionCount !== 1 ? 's' : ''}</p>
+                    {quiz.timeLimitSeconds && (
+                      <>
+                        <span className="text-xs text-apple-text-3">·</span>
+                        <span className="text-xs text-apple-text-2">{quiz.timeLimitSeconds >= 60 ? `${Math.round(quiz.timeLimitSeconds / 60)} min quiz` : `${quiz.timeLimitSeconds}s quiz`}</span>
+                      </>
+                    )}
+                    {quiz.defaultQuestionTimeSeconds && (
+                      <>
+                        <span className="text-xs text-apple-text-3">·</span>
+                        <span className="text-xs text-apple-text-2">{quiz.defaultQuestionTimeSeconds}s / question</span>
+                      </>
+                    )}
+                    {quiz.timeEnforcement && (
+                      <>
+                        <span className="text-xs text-apple-text-3">·</span>
+                        <span className="text-xs font-semibold text-orange-600 bg-orange-50 px-1.5 py-0.5 rounded-full">Stops: {enforcementShortLabel(quiz.timeEnforcement)}</span>
+                      </>
+                    )}
                     <span className="text-xs text-apple-text-3">·</span>
                     {quiz.groups?.length ? (
                       <p className="text-xs text-apple-text-2">
@@ -1439,6 +1653,9 @@ function QuizzesTab() {
                       <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${quiz.isDisabled ? 'translate-x-0.5' : 'translate-x-4'}`}/>
                     </button>
                   </div>
+                  <button onClick={() => setEditQuiz(quiz)} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-3 py-1.5 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors">
+                    Time limits
+                  </button>
                   <button onClick={() => setAssignQuiz(quiz)} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-3 py-1.5 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors">
                     Groups
                   </button>

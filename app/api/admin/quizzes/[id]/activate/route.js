@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAdmin } from '@/lib/session';
 import prisma from '@/lib/prisma';
 import { emitToAll, updateLiveState } from '@/lib/socket-emitter';
+import { startQuizSessionIfNeeded } from '@/lib/question-timer';
 
 export async function POST(request, { params }) {
   const session = await requireAdmin();
@@ -21,6 +22,9 @@ export async function POST(request, { params }) {
   // Live broadcast still focuses on the quiz being activated.
   await prisma.quiz.update({ where: { id: quizId }, data: { isActive: true } });
 
+  // Start quiz session clock when a quiz duration is configured
+  const withSession = await startQuizSessionIfNeeded(quizId);
+
   const groupIds = quiz.teamGroups.map(tg => tg.groupId);
   const teams = await prisma.team.findMany({
     where: {
@@ -30,10 +34,18 @@ export async function POST(request, { params }) {
     select: { id: true, name: true },
   });
 
+  const sessionStartedAt = withSession?.sessionStartedAt?.toISOString?.()
+    ?? withSession?.sessionStartedAt
+    ?? null;
+
   updateLiveState({
     activeQuizId: quizId,
     activeQuizTitle: quiz.title,
     timeLimitSeconds: quiz.timeLimitSeconds,
+    defaultQuestionTimeSeconds: quiz.defaultQuestionTimeSeconds,
+    timeEnforcement: quiz.timeEnforcement,
+    quizSessionStartedAt: sessionStartedAt,
+    quizSessionExpired: false,
     currentQuestion: null,
     showResults: false,
     resultStats: null,
@@ -42,7 +54,19 @@ export async function POST(request, { params }) {
     submittedTeamIds: [],
   });
 
-  emitToAll('quiz:activated', { quizId, title: quiz.title, timeLimitSeconds: quiz.timeLimitSeconds });
+  emitToAll('quiz:activated', {
+    quizId,
+    title: quiz.title,
+    timeLimitSeconds: quiz.timeLimitSeconds,
+    defaultQuestionTimeSeconds: quiz.defaultQuestionTimeSeconds,
+    timeEnforcement: quiz.timeEnforcement,
+    sessionStartedAt,
+  });
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({
+    success: true,
+    sessionStartedAt,
+    timeLimitSeconds: quiz.timeLimitSeconds,
+    timeEnforcement: quiz.timeEnforcement,
+  });
 }
