@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireTeam } from '@/lib/session';
 import prisma from '@/lib/prisma';
 import { assertTeamCanAccessQuestion } from '@/lib/team-groups';
+import { computeTiming } from '@/lib/time-limits';
 
 export async function GET(request, { params }) {
   const session = await requireTeam();
@@ -12,7 +13,7 @@ export async function GET(request, { params }) {
     where: { id: qid },
     include: {
       quiz: true,
-      section: { select: { timeLimitSeconds: true } },
+      section: true,
       testCases: { orderBy: { orderIndex: 'asc' } },
     },
   });
@@ -31,17 +32,12 @@ export async function GET(request, { params }) {
   });
   const idx = allReleased.findIndex(q => q.id === question.id);
 
-  // Effective time limit: question > section > quiz
-  const effectiveTimeLimit = question.timeLimitSeconds
-    ?? question.section?.timeLimitSeconds
-    ?? question.quiz.timeLimitSeconds
-    ?? null;
-
-  let timeRemaining = null;
-  if (effectiveTimeLimit && question.releasedAt && !answer) {
-    const elapsed = Math.floor((Date.now() - new Date(question.releasedAt).getTime()) / 1000);
-    timeRemaining = Math.max(0, effectiveTimeLimit - elapsed);
-  }
+  const timing = computeTiming({
+    question,
+    section: question.section,
+    quiz: question.quiz,
+    alreadyAnswered: !!answer,
+  });
 
   const base = {
     id: question.id,
@@ -55,9 +51,27 @@ export async function GET(request, { params }) {
     nextId: idx < allReleased.length - 1 ? allReleased[idx + 1].id : null,
     questionNumber: idx + 1,
     totalQuestions: allReleased.length,
-    timeLimitSeconds: effectiveTimeLimit,
+    // Effective answer window for this question under current enforcement
+    timeLimitSeconds: timing.effectiveLimitSeconds,
+    questionTimeLimitSeconds: timing.questionLimitSeconds,
     releasedAt: question.releasedAt?.toISOString() ?? null,
-    timeRemaining,
+    timeRemaining: timing.timeRemaining,
+    timing: {
+      enforcement: timing.enforcement,
+      bindingSource: timing.bindingSource,
+      isExpired: timing.isExpired,
+      questionLimitSeconds: timing.questionLimitSeconds,
+      sectionLimitSeconds: timing.sectionLimitSeconds,
+      quizLimitSeconds: timing.quizLimitSeconds,
+      sectionRemaining: timing.sectionExpiresAt != null
+        ? Math.max(0, Math.floor((timing.sectionExpiresAt - Date.now()) / 1000))
+        : null,
+      quizRemaining: timing.quizExpiresAt != null
+        ? Math.max(0, Math.floor((timing.quizExpiresAt - Date.now()) / 1000))
+        : null,
+      quizSessionStartedAt: question.quiz.sessionStartedAt?.toISOString() ?? null,
+      sectionSessionStartedAt: question.section?.sessionStartedAt?.toISOString() ?? null,
+    },
   };
 
   // ── CODING ────────────────────────────────────────────────────────────────
@@ -76,7 +90,6 @@ export async function GET(request, { params }) {
       starterCode,
       allowedLanguages,
       visibleTestCases,
-      // Submission data
       submittedCode: answer?.codeSubmission ?? null,
       submittedLanguage: answer?.language ?? null,
       testsPassed: answer?.testsPassed ?? null,

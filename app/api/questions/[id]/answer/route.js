@@ -5,6 +5,7 @@ import { emitToAll, getLiveState, updateLiveState } from '@/lib/socket-emitter';
 import { runTestCases } from '@/lib/execute-code';
 import { isContestClosedForSubmit } from '@/lib/settings';
 import { assertTeamCanAccessQuestion } from '@/lib/team-groups';
+import { computeTiming } from '@/lib/time-limits';
 
 export async function POST(request, { params }) {
   const session = await requireTeam();
@@ -19,19 +20,26 @@ export async function POST(request, { params }) {
 
   const question = await prisma.question.findUnique({
     where: { id: qid },
-    include: { quiz: true, testCases: { orderBy: { orderIndex: 'asc' } } },
+    include: { quiz: true, section: true, testCases: { orderBy: { orderIndex: 'asc' } } },
   });
   if (!question || !question.isReleased) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   const access = await assertTeamCanAccessQuestion(session.teamId, question);
   if (!access.ok) return NextResponse.json({ error: access.error }, { status: access.status });
 
-  // Check timer expiry
-  if (question.quiz.timeLimitSeconds && question.releasedAt) {
-    const expireAt = new Date(question.releasedAt).getTime() + question.quiz.timeLimitSeconds * 1000;
-    if (Date.now() > expireAt) {
-      return NextResponse.json({ error: 'Time has expired for this question' }, { status: 400 });
-    }
+  // Check timer expiry using enforcement-aware effective deadline
+  const timing = computeTiming({
+    question,
+    section: question.section,
+    quiz: question.quiz,
+  });
+  if (timing.isExpired) {
+    const label = timing.bindingSource === 'QUIZ'
+      ? 'quiz'
+      : timing.bindingSource === 'SECTION'
+        ? 'section'
+        : 'question';
+    return NextResponse.json({ error: `Time has expired for this ${label}` }, { status: 400 });
   }
 
   const existing = await prisma.answer.findUnique({

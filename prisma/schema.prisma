@@ -7,31 +7,48 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum TimeEnforcement {
+  QUESTION
+  SECTION
+  QUIZ
+  STRICTEST
+}
+
 model Quiz {
-  id                Int             @id @default(autoincrement())
-  title             String
-  description       String?
-  isActive          Boolean         @default(false) @map("is_active")
-  isDisabled        Boolean         @default(false) @map("is_disabled")
-  pointsPerQuestion Int             @default(10) @map("points_per_question")
-  timeLimitSeconds  Int?            @map("time_limit_seconds")
-  createdAt         DateTime        @default(now()) @map("created_at")
-  questions         Question[]
-  sections          Section[]
-  teamGroups        QuizTeamGroup[]
+  id                         Int              @id @default(autoincrement())
+  title                      String
+  description                String?
+  isActive                   Boolean          @default(false) @map("is_active")
+  isDisabled                 Boolean          @default(false) @map("is_disabled")
+  pointsPerQuestion          Int              @default(10) @map("points_per_question")
+  /// Total quiz session budget (wall clock from sessionStartedAt).
+  timeLimitSeconds           Int?             @map("time_limit_seconds")
+  /// Default per-question answer window when a question has no override.
+  defaultQuestionTimeSeconds Int?             @map("default_question_time_seconds")
+  /// Which level's limit is the binding maximum.
+  timeEnforcement            TimeEnforcement  @default(QUESTION) @map("time_enforcement")
+  sessionStartedAt           DateTime?        @map("session_started_at")
+  createdAt                  DateTime         @default(now()) @map("created_at")
+  questions                  Question[]
+  sections                   Section[]
+  teamGroups                 QuizTeamGroup[]
 
   @@map("quizzy")
 }
 
 model Section {
-  id               Int        @id @default(autoincrement())
-  quizId           Int        @map("quiz_id")
-  quiz             Quiz       @relation(fields: [quizId], references: [id], onDelete: Cascade)
-  name             String
-  isEnabled        Boolean    @default(true) @map("is_enabled")
-  orderIndex       Int        @default(0) @map("order_index")
-  timeLimitSeconds Int?       @map("time_limit_seconds")
-  questions        Question[]
+  id                         Int       @id @default(autoincrement())
+  quizId                     Int       @map("quiz_id")
+  quiz                       Quiz      @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  name                       String
+  isEnabled                  Boolean   @default(true) @map("is_enabled")
+  orderIndex                 Int       @default(0) @map("order_index")
+  /// Total section session budget (wall clock from sessionStartedAt).
+  timeLimitSeconds           Int?      @map("time_limit_seconds")
+  /// Default per-question time for questions in this section (overrides quiz default).
+  defaultQuestionTimeSeconds Int?      @map("default_question_time_seconds")
+  sessionStartedAt           DateTime? @map("session_started_at")
+  questions                  Question[]
 
   @@index([quizId])
   @@map("sections")
