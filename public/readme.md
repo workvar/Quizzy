@@ -1,7 +1,10 @@
-# Intro
-A WebApp that displays random questions to be answered by the contestants of the Quizzy competition held during TechTatva '19.
+# Quizzy
+Live MCQ + coding quiz platform for teams — Material Design 3 UI powered by [AWC UI](https://awc-ui.dev).
 
-![Logo Designs](https://user-images.githubusercontent.com/27415791/155770669-b06fc904-d612-4aeb-a0d3-a34823f8a6eb.jpg)
+![Quizzy landing](/screenshots/landing.png)
 
 ## Preview
-![image](https://user-images.githubusercontent.com/27415791/155770657-e7a4dc4e-8e3d-4304-a483-47ee31d59649.png)
+
+| Landing | Admin | Live arena |
+| --- | --- | --- |
+| ![Landing](/screenshots/landing.png) | ![Admin login](/screenshots/admin-login.png) | ![Live](/screenshots/live.png) |

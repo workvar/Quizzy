@@ -1,10 +1,15 @@
 # Quizzy
-A WebApp that displays random questions to be answered by the contestants of the Quizzy competition held during TechTatva '19.
+Live MCQ + coding quiz platform for teams — Material Design 3 UI powered by [AWC UI](https://awc-ui.dev).
 
-![Logo Designs](https://user-images.githubusercontent.com/27415791/155770362-f9df86b1-4862-484a-808b-ddf8f6553162.jpg)
-
+![Quizzy landing](public/screenshots/landing.png)
 
 ## Preview
-![image](https://user-images.githubusercontent.com/27415791/155766019-767a1b57-ffb8-4c5e-81f9-6fbd04e16dc3.png)
 
+| Landing | Admin | Live arena |
+| --- | --- | --- |
+| ![Landing](public/screenshots/landing.png) | ![Admin login](public/screenshots/admin-login.png) | ![Live](public/screenshots/live.png) |
 
+## Stack
+- Next.js 14 (App Router) + Socket.IO
+- [@awc-ui/react](https://awc-ui.dev/frameworks/react/) Material Design 3 components
+- Prisma + PostgreSQL
