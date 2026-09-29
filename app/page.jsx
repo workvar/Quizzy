@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { MdButton, MdCard, MdTextField, MdChip } from '@awc-ui/react';
 import Logo, { LogoMark } from '@/components/Logo';
 
 export default function LoginPage() {
@@ -24,7 +24,7 @@ export default function LoginPage() {
       if (d.loginBanner) setBanner(d.loginBanner);
       if (d.teamLoginEnabled === false) setLoginEnabled(false);
     }).catch(() => { });
-  }, []);
+  }, [router]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,19 +46,13 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-brand-mesh">
-      <div className="brand-orb w-[28rem] h-[28rem] -top-24 -left-24 bg-brand-orange-soft/50 animate-brand-float" />
-      <div className="brand-orb w-[22rem] h-[22rem] bottom-[-6rem] right-[-4rem] bg-brand-orange/30" style={{ animationDelay: '1.2s' }} />
-
+    <div className="qz-page relative min-h-screen overflow-hidden">
       <div className="relative z-10 min-h-screen flex flex-col">
         <div className="px-6 py-5 flex items-center justify-between">
           <Logo size="sm" href="/" />
-          <Link
-            href="/admin"
-            className="text-sm font-semibold text-brand-ink-2 hover:text-brand-orange transition-colors"
-          >
-            Admin →
-          </Link>
+          <MdButton variant="text" href="/admin" trailingIcon="arrow_forward">
+            Admin
+          </MdButton>
         </div>
 
         <div className="flex-1 flex items-center justify-center px-5 pb-16">
@@ -67,75 +61,66 @@ export default function LoginPage() {
               <div className="inline-flex mb-5 animate-brand-float">
                 <LogoMark size="hero" className="shadow-brand rounded-[20px]" />
               </div>
-              <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-brand-ink">
+              <h1 className="font-display text-4xl sm:text-5xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">
                 Quizzy
               </h1>
-              <p className="mt-3 text-base text-brand-ink-2 max-w-sm mx-auto leading-relaxed">
+              <p className="mt-3 text-base text-[var(--md-sys-color-on-surface-variant)] max-w-sm mx-auto leading-relaxed">
                 {tagline}
               </p>
             </div>
 
             {banner ? (
-              <div className="mb-4 bg-brand-mist border border-orange-200/80 text-brand-orange-deep text-sm rounded-apple px-4 py-2.5 text-center font-medium">
-                {banner}
+              <div className="mb-4 flex justify-center">
+                <MdChip variant="suggestion" appearance="filled" color="primary" label={banner} />
               </div>
             ) : null}
 
-            <div
-              className="bg-white/85 backdrop-blur-xl border border-white/70 rounded-apple-xl p-7 sm:p-8"
-              style={{ boxShadow: '0 24px 60px rgba(25,27,31,0.10), 0 0 0 1px rgba(255,255,255,0.7) inset' }}
-            >
+            <MdCard variant="elevated" fullWidth style={{ padding: '1.75rem' }}>
               {!loginEnabled ? (
                 <div className="text-center py-2">
-                  <p className="text-sm font-semibold text-brand-ink">Team login is paused</p>
-                  <p className="text-sm text-brand-ink-2 mt-1">Check back soon or contact the organizers.</p>
+                  <p className="text-sm font-semibold text-[var(--md-sys-color-on-surface)]">Team login is paused</p>
+                  <p className="text-sm text-[var(--md-sys-color-on-surface-variant)] mt-1">Check back soon or contact the organizers.</p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-brand-ink-2 uppercase tracking-wide mb-1.5">Team Name</label>
-                    <input
-                      type="text"
-                      value={teamname}
-                      onChange={e => setTeamname(e.target.value)}
-                      placeholder="e.g. TeamAlpha"
-                      required
-                      className="w-full px-4 py-2.5 bg-brand-surface border border-brand-line rounded-apple text-brand-ink text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent placeholder-brand-ink-3 transition-all"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-brand-ink-2 uppercase tracking-wide mb-1.5">Password</label>
-                    <input
-                      type="password"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      required
-                      className="w-full px-4 py-2.5 bg-brand-surface border border-brand-line rounded-apple text-brand-ink text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent placeholder-brand-ink-3 transition-all"
-                    />
-                  </div>
-                  {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-apple px-4 py-2.5">
-                      {error}
-                    </div>
-                  )}
-                  <button
+                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                  <MdTextField
+                    variant="outlined"
+                    label="Team name"
+                    name="teamname"
+                    value={teamname}
+                    required
+                    autocomplete="username"
+                    onMdInput={(e) => setTeamname(e.detail ?? '')}
+                  />
+                  <MdTextField
+                    variant="outlined"
+                    label="Password"
+                    name="password"
+                    type="password"
+                    value={password}
+                    required
+                    passwordToggle="internal"
+                    autocomplete="current-password"
+                    onMdInput={(e) => setPassword(e.detail ?? '')}
+                    error={Boolean(error)}
+                    errorText={error || undefined}
+                    reserveSupportingSpace
+                  />
+                  <MdButton
                     type="submit"
-                    disabled={loading}
-                    className="w-full bg-brand-orange text-white font-semibold py-3 rounded-apple text-sm hover:bg-brand-orange-deep active:scale-[0.99] transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-brand"
+                    variant="filled"
+                    size="md"
+                    fullWidth
+                    loading={loading}
+                    icon="login"
                   >
-                    {loading ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z" /></svg>
-                        Authenticating…
-                      </>
-                    ) : 'Enter Arena'}
-                  </button>
+                    Enter Arena
+                  </MdButton>
                 </form>
               )}
-            </div>
+            </MdCard>
 
-            <p className="mt-6 text-center text-xs text-brand-ink-3">
+            <p className="mt-6 text-center text-xs text-[var(--md-sys-color-on-surface-variant)]">
               Built for live contests · Powered by Quizzy
             </p>
           </div>

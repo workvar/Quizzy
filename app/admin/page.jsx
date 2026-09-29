@@ -1,12 +1,26 @@
 'use client';
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  MdButton,
+  MdCard,
+  MdTextField,
+  MdDialog,
+  MdSwitch,
+  MdTabs,
+  MdTab,
+  MdLoadingIndicator,
+  MdAvatar,
+  MdChip,
+  MdDivider,
+  useOverlay,
+} from '@awc-ui/react';
 import AnswerChart from '@/components/AnswerChart';
 import CodeEditor from '@/components/CodeEditor';
 import SearchableSelect from '@/components/SearchableSelect';
 import { useConfirm } from '@/components/DialogProvider';
 import { LogoMark } from '@/components/Logo';
-import AppHeader from '@/components/AppHeader';
+import AppHeader, { HeaderAction } from '@/components/AppHeader';
 
 /* ─── Markdown renderer ─── */
 function renderMd(text) {
@@ -25,50 +39,58 @@ function renderMd(text) {
     .replace(/<p><\/p>/g, '');
 }
 
-/* ─── Modal ─── */
+/* ─── Modal (MdDialog + useOverlay for exit animation) ─── */
 function Modal({ title, onClose, children, wide }) {
+  const dialogRef = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  const overlay = useOverlay(dialogRef, {
+    onClosed: () => onCloseRef.current?.(),
+  });
+
   useEffect(() => {
-    const h = (e) => { if (e.key === 'Escape') onClose(); };
-    window.addEventListener('keydown', h);
-    return () => window.removeEventListener('keydown', h);
-  }, [onClose]);
+    dialogRef.current?.show?.();
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-md" onClick={onClose} />
-      <div className={`relative bg-white/90 backdrop-blur-xl border border-white/60 rounded-apple-xl shadow-2xl w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} max-h-[90vh] flex flex-col`} style={{ boxShadow: '0 25px 60px rgba(0,0,0,0.18), 0 0 0 1px rgba(255,255,255,0.5) inset' }}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-black/5 flex-shrink-0">
-          <h2 className="text-base font-bold text-apple-text">{title}</h2>
-          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center rounded-full bg-black/5 hover:bg-black/10 transition-colors text-apple-text-2">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
-      </div>
-    </div>
+    <>
+      <style>{`
+        .admin-md-dialog::part(actions) { display: none !important; }
+        .admin-md-dialog-wide::part(container) {
+          max-inline-size: min(48rem, calc(100% - 48px));
+          inline-size: min(48rem, calc(100% - 48px));
+        }
+      `}</style>
+      <MdDialog
+        ref={dialogRef}
+        className={`admin-md-dialog${wide ? ' admin-md-dialog-wide' : ''}`}
+        headline={title}
+        scrimDismissible
+        onMdClose={overlay.onMdClose}
+      >
+        {children}
+        {/* Slotted action suppresses default Cancel/OK; body owns its own buttons */}
+        <MdButton slot="actions" variant="text" tabIndex={-1} aria-hidden="true">Close</MdButton>
+      </MdDialog>
+    </>
   );
 }
 
 /* ─── Avatar ─── */
 function Avatar({ name, size = 8 }) {
-  const colors = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55','#5AC8FA','#FFCC00'];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  const color = colors[Math.abs(hash) % colors.length];
-  const initials = name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  return (
-    <div className={`w-${size} h-${size} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 select-none`} style={{ background: color, fontSize: size <= 8 ? '0.7rem' : '0.9rem' }}>
-      {initials}
-    </div>
-  );
+  const px = typeof size === 'number' ? size * 4 : 32;
+  return <MdAvatar name={name || '?'} size={String(px)} label={name || 'User'} />;
 }
 
 /* ─── Spinner ─── */
 function Spinner({ size = 5 }) {
+  const px = typeof size === 'number' ? Math.max(16, size * 4) : 20;
   return (
-    <svg className={`animate-spin h-${size} w-${size} text-apple-blue`} viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/>
-    </svg>
+    <MdLoadingIndicator
+      label="Loading"
+      style={{ '--md-loading-indicator-size': `${px}px` }}
+    />
   );
 }
 
@@ -280,12 +302,12 @@ function AddQuestionModal({ quizId, sections, onClose, onAdded }) {
               </div>
               <div className="space-y-3">
                 {testCases.map((tc, i) => (
-                  <div key={i} className={`p-3 rounded-apple border ${tc.isHidden ? 'border-orange-200 bg-orange-50' : 'border-apple-gray-2 bg-white'}`}>
+                  <div key={i} className={`p-3 rounded-apple border ${tc.isHidden ? 'border-emerald-200 bg-emerald-50' : 'border-apple-gray-2 bg-white'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-apple-text-2">Test {i + 1}</span>
                       <div className="flex items-center gap-3">
                         <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} className="accent-orange-500" />
+                          <input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} className="accent-emerald-700" />
                           <span className="text-xs text-apple-text-2">Hidden</span>
                         </label>
                         {testCases.length > 1 && (
@@ -314,10 +336,10 @@ function AddQuestionModal({ quizId, sections, onClose, onAdded }) {
         )}
 
         <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
-            {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Question'}
-          </button>
+          <MdButton variant="text" onMdClick={onClose}>Cancel</MdButton>
+          <MdButton variant="filled" onMdClick={submit} disabled={saving} loading={saving}>
+            {saving ? 'Creating…' : 'Create Question'}
+          </MdButton>
         </div>
       </div>
     </Modal>
@@ -411,7 +433,7 @@ function UploadQuestionsModal({ quizId, onClose, onUploaded }) {
               <p className="text-base font-bold text-apple-text">Import Complete</p>
               <p className="text-sm text-apple-text-2 mt-1">{result.created} question{result.created !== 1 ? 's' : ''} imported successfully</p>
             </div>
-            <button onClick={onClose} className="px-6 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors">Done</button>
+            <MdButton variant="filled" onMdClick={onClose}>Done</MdButton>
           </div>
         ) : (
           <>
@@ -435,10 +457,10 @@ function UploadQuestionsModal({ quizId, onClose, onUploaded }) {
             <DropZone file={file} onFile={setFile} />
 
             <div className="flex justify-end gap-3 pt-1">
-              <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-              <button onClick={upload} disabled={!file || uploading} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
-                {uploading ? <><Spinner size={4} />Importing…</> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>Import Questions</>}
-              </button>
+              <MdButton variant="text" onMdClick={onClose}>Cancel</MdButton>
+              <MdButton variant="filled" icon="upload" onMdClick={upload} disabled={!file || uploading} loading={uploading}>
+                {uploading ? 'Importing…' : 'Import Questions'}
+              </MdButton>
             </div>
           </>
         )}
@@ -537,10 +559,10 @@ function CreateQuizModal({ onClose, onCreated }) {
           )}
         </div>
         <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
-            {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Quiz'}
-          </button>
+          <MdButton variant="text" onMdClick={onClose}>Cancel</MdButton>
+          <MdButton variant="filled" onMdClick={submit} disabled={saving} loading={saving}>
+            {saving ? 'Creating…' : 'Create Quiz'}
+          </MdButton>
         </div>
       </div>
     </Modal>
@@ -601,10 +623,10 @@ function AssignGroupsModal({ quiz, onClose, onSaved }) {
         <div className="flex justify-between gap-3 pt-2">
           <button type="button" onClick={() => setGroupIds([])} className="px-3 py-2 text-sm font-semibold text-apple-text-2 hover:text-apple-blue">Clear all</button>
           <div className="flex gap-3">
-            <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-            <button onClick={save} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
-              {saving && <Spinner size={4} />}{saving ? 'Saving…' : 'Save'}
-            </button>
+            <MdButton variant="text" onMdClick={onClose}>Cancel</MdButton>
+            <MdButton variant="filled" onMdClick={save} disabled={saving} loading={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </MdButton>
           </div>
         </div>
       </div>
@@ -847,9 +869,7 @@ function ManageSectionsModal({ quizId, sections, onClose, onChange }) {
           <div className="flex gap-2">
             <input value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && addSection()} placeholder="New section name…" className="flex-1 px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
             <input type="number" min="5" max="600" value={newTimeLimit} onChange={e => setNewTimeLimit(e.target.value)} placeholder="Sec" className="w-20 px-3 py-2 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" title="Section time limit (seconds)" />
-            <button onClick={addSection} disabled={!newName.trim() || adding} className="px-4 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-1.5">
-              {adding && <Spinner size={3} />}Add
-            </button>
+            <MdButton variant="filled" onMdClick={addSection} disabled={!newName.trim() || adding} loading={adding}>Add</MdButton>
           </div>
           <p className="text-xs text-apple-text-3">Optional section time limit in seconds (overrides quiz default for questions in this section)</p>
         </div>
@@ -1010,11 +1030,11 @@ function EditQuestionModal({ question, sections, onClose, onSaved }) {
               </div>
               <div className="space-y-3">
                 {testCases.map((tc, i) => (
-                  <div key={i} className={`p-3 rounded-apple border ${tc.isHidden ? 'border-orange-200 bg-orange-50' : 'border-apple-gray-2 bg-white'}`}>
+                  <div key={i} className={`p-3 rounded-apple border ${tc.isHidden ? 'border-emerald-200 bg-emerald-50' : 'border-apple-gray-2 bg-white'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-apple-text-2">Test {i + 1}</span>
                       <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} className="accent-orange-500" /><span className="text-xs text-apple-text-2">Hidden</span></label>
+                        <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} className="accent-emerald-700" /><span className="text-xs text-apple-text-2">Hidden</span></label>
                         {testCases.length > 1 && <button onClick={() => setTestCases(p => p.filter((_, idx) => idx !== i))} className="text-apple-text-3 hover:text-apple-red"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>}
                       </div>
                     </div>
@@ -1030,10 +1050,10 @@ function EditQuestionModal({ question, sections, onClose, onSaved }) {
         )}
 
         <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
-            {saving && <Spinner size={4} />}{saving ? 'Saving…' : 'Save Changes'}
-          </button>
+          <MdButton variant="text" onMdClick={onClose}>Cancel</MdButton>
+          <MdButton variant="filled" onMdClick={submit} disabled={saving} loading={saving}>
+            {saving ? 'Saving…' : 'Save Changes'}
+          </MdButton>
         </div>
       </div>
     </Modal>
@@ -1149,10 +1169,7 @@ function QuizQuestionsPanel({ quiz, onBack }) {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             Upload CSV
           </button>
-          <button onClick={() => setShowAdd(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-            Add Question
-          </button>
+          <MdButton variant="filled" icon="add" onMdClick={() => setShowAdd(true)}>Add Question</MdButton>
         </div>
       </div>
 
@@ -1192,7 +1209,7 @@ function QuizQuestionsPanel({ quiz, onBack }) {
                     {q.isReleased ? <span className="text-xs font-semibold text-apple-green">Released</span> : <span className="text-xs text-apple-text-3">Unreleased</span>}
                     {q.type === 'CODING' && <span className="text-xs bg-blue-100 text-apple-blue font-semibold px-1.5 py-0.5 rounded-full">Coding</span>}
                     {q.type !== 'CODING' && q.isMultiAnswer && <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-1.5 py-0.5 rounded-full">Multi</span>}
-                    {q.timeLimitSeconds && <span className="text-xs bg-orange-50 text-orange-600 font-semibold px-1.5 py-0.5 rounded-full">{q.timeLimitSeconds}s</span>}
+                    {q.timeLimitSeconds && <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-1.5 py-0.5 rounded-full">{q.timeLimitSeconds}s</span>}
                     <span className="text-xs text-apple-text-3">{q.stats?.attempted || 0} responses</span>
                   </div>
                 </div>
@@ -1226,10 +1243,10 @@ function QuizQuestionsPanel({ quiz, onBack }) {
                         <p className="text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-2">Test Cases ({q.testCases.length})</p>
                         <div className="space-y-2">
                           {q.testCases.map((tc, ti) => (
-                            <div key={tc.id} className={`rounded-apple border p-3 text-xs font-mono ${tc.isHidden ? 'border-orange-200 bg-orange-50' : 'border-apple-gray-2 bg-white'}`}>
+                            <div key={tc.id} className={`rounded-apple border p-3 text-xs font-mono ${tc.isHidden ? 'border-emerald-200 bg-emerald-50' : 'border-apple-gray-2 bg-white'}`}>
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-bold text-apple-text-2">Test {ti + 1}</span>
-                                {tc.isHidden && <span className="text-orange-600 font-semibold">Hidden</span>}
+                                {tc.isHidden && <span className="text-emerald-700 font-semibold">Hidden</span>}
                               </div>
                               {tc.input && <div><span className="text-apple-text-3">In: </span><span className="whitespace-pre-wrap text-apple-text">{tc.input}</span></div>}
                               <div><span className="text-apple-text-3">Expected: </span><span className="whitespace-pre-wrap text-apple-text">{tc.expectedOutput}</span></div>
@@ -1396,10 +1413,7 @@ function QuizzesTab() {
           <h2 className="text-xl font-bold text-apple-text tracking-tight">Quizzes</h2>
           <p className="text-sm text-apple-text-2 mt-0.5">{quizzes.length} quizzes · assign groups to restrict access</p>
         </div>
-        <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-          Create Quiz
-        </button>
+        <MdButton variant="filled" icon="add" onMdClick={() => setShowCreate(true)}>Create Quiz</MdButton>
       </div>
 
       {loading ? (
@@ -1505,10 +1519,10 @@ function CreateGroupModal({ onClose, onCreated }) {
           <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Track A · Juniors" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all" />
         </div>
         <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
-            {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Group'}
-          </button>
+          <MdButton variant="text" onMdClick={onClose}>Cancel</MdButton>
+          <MdButton variant="filled" onMdClick={submit} disabled={saving} loading={saving}>
+            {saving ? 'Creating…' : 'Create Group'}
+          </MdButton>
         </div>
       </div>
     </Modal>
@@ -1584,10 +1598,10 @@ function CreateTeamModal({ onClose, onCreated, groups, onGroupsChange }) {
           />
         </div>
         <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-          <button onClick={submit} disabled={saving} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
-            {saving && <Spinner size={4} />}{saving ? 'Creating…' : 'Create Team'}
-          </button>
+          <MdButton variant="text" onMdClick={onClose}>Cancel</MdButton>
+          <MdButton variant="filled" onMdClick={submit} disabled={saving} loading={saving}>
+            {saving ? 'Creating…' : 'Create Team'}
+          </MdButton>
         </div>
       </div>
     </Modal>
@@ -1665,7 +1679,7 @@ function UploadTeamsModal({ onClose, onUploaded, groups, onGroupsChange }) {
               <p className="text-sm text-apple-text-2 mt-1">{result.created} team{result.created !== 1 ? 's' : ''} imported</p>
               {result.errors?.length > 0 && result.errors.map((e, i) => <p key={i} className="text-xs text-apple-red mt-1">{e}</p>)}
             </div>
-            <button onClick={onClose} className="px-6 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors">Done</button>
+            <MdButton variant="filled" onMdClick={onClose}>Done</MdButton>
           </div>
         ) : (
           <>
@@ -1721,10 +1735,10 @@ function UploadTeamsModal({ onClose, onUploaded, groups, onGroupsChange }) {
             <DropZone file={file} onFile={setFile} />
 
             <div className="flex justify-end gap-3 pt-1">
-              <button onClick={onClose} className="px-4 py-2 text-sm font-semibold text-apple-text-2 bg-apple-gray border border-apple-gray-3 rounded-apple hover:bg-apple-gray-2 transition-colors">Cancel</button>
-              <button onClick={upload} disabled={!file || uploading} className="px-5 py-2 text-sm font-semibold text-white bg-apple-blue rounded-apple hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center gap-2">
-                {uploading ? <><Spinner size={4} />Importing…</> : <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>Import Teams</>}
-              </button>
+              <MdButton variant="text" onMdClick={onClose}>Cancel</MdButton>
+              <MdButton variant="filled" icon="upload" onMdClick={upload} disabled={!file || uploading} loading={uploading}>
+                {uploading ? 'Importing…' : 'Import Teams'}
+              </MdButton>
             </div>
           </>
         )}
@@ -1849,10 +1863,7 @@ function TeamsTab() {
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
             Upload CSV
           </button>
-          <button onClick={() => setShowCreate(true)} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-            Create Team
-          </button>
+          <MdButton variant="filled" icon="add" onMdClick={() => setShowCreate(true)}>Create Team</MdButton>
         </div>
       </div>
 
@@ -1933,7 +1944,7 @@ function TeamsTab() {
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => toggleBan(team)} disabled={banning[team.id]} title={team.isBanned ? 'Unban' : 'Ban'} className={`p-1.5 transition-colors ${team.isBanned ? 'text-apple-green hover:text-green-600' : 'text-orange-400 hover:text-orange-600'}`}>
+                      <button onClick={() => toggleBan(team)} disabled={banning[team.id]} title={team.isBanned ? 'Unban' : 'Ban'} className={`p-1.5 transition-colors ${team.isBanned ? 'text-apple-green hover:text-green-600' : 'text-emerald-600 hover:text-emerald-700'}`}>
                         {team.isBanned
                           ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                           : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
@@ -1959,12 +1970,17 @@ function TeamsTab() {
    ════════════════════════════════════════ */
 function Toggle({ on, onChange, label }) {
   return (
-    <button type="button" onClick={() => onChange(!on)} className="flex items-center gap-3 w-full text-left">
-      <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0 ${on ? 'bg-apple-blue' : 'bg-apple-gray-3'}`}>
-        <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${on ? 'translate-x-6' : 'translate-x-1'}`} />
-      </span>
-      <span className="text-sm text-apple-text font-medium">{label}</span>
-    </button>
+    <label className="flex items-center gap-3 w-full text-left cursor-pointer">
+      <MdSwitch
+        selected={!!on}
+        aria-label={label}
+        onMdInput={(e) => {
+          e.preventDefault();
+          onChange(!!e.detail?.selected);
+        }}
+      />
+      <span className="text-sm font-medium text-[var(--md-sys-color-on-surface)]">{label}</span>
+    </label>
   );
 }
 
@@ -2233,9 +2249,7 @@ function SettingsTab() {
             />
           </div>
           <textarea rows={3} value={message} onChange={e => setMessage(e.target.value)} placeholder="Message to teams…" className="w-full px-4 py-2.5 bg-apple-gray border border-apple-gray-3 rounded-apple text-apple-text text-sm focus:outline-none focus:ring-2 focus:ring-apple-blue focus:border-transparent transition-all resize-y" />
-          <button type="button" onClick={sendBroadcast} disabled={sendingMsg || !message.trim()} className="flex items-center gap-2 text-sm font-semibold text-white bg-apple-blue px-4 py-2 rounded-apple hover:bg-brand-orange-deep disabled:opacity-50">
-            {sendingMsg && <Spinner size={4} />}Send message
-          </button>
+          <MdButton variant="filled" type="button" onMdClick={sendBroadcast} disabled={sendingMsg || !message.trim()} loading={sendingMsg}>Send message</MdButton>
         </div>
 
         {/* Code runner */}
@@ -2286,9 +2300,7 @@ function SettingsTab() {
       </div>
 
       <div className="mt-6 flex items-center gap-3">
-        <button onClick={save} disabled={saving} className="flex items-center gap-2 bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-brand-orange-deep transition-colors disabled:opacity-50">
-          {saving && <Spinner size={4} />}{saving ? 'Saving…' : 'Save Settings'}
-        </button>
+        <MdButton variant="filled" onMdClick={save} disabled={saving} loading={saving}>{saving ? 'Saving…' : 'Save Settings'}</MdButton>
         <button onClick={load} className="text-sm font-semibold text-apple-text-2 hover:text-apple-blue">Reset form</button>
       </div>
     </div>
@@ -2650,10 +2662,7 @@ export default function AdminPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <svg className="animate-spin h-8 w-8 text-brand-orange" viewBox="0 0 24 24" fill="none">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/>
-        </svg>
+        <MdLoadingIndicator label="Loading admin" style={{ '--md-loading-indicator-size': '40px' }} />
       </div>
     }>
       <AdminPageInner />
@@ -2710,58 +2719,60 @@ function AdminPageInner() {
     router.push('/');
   };
 
-  const TABS = [
-    { key: 'scores', label: 'Live Scores', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg> },
-    { key: 'quizzes', label: 'Quizzes', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg> },
-    { key: 'teams', label: 'Teams', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg> },
-    { key: 'settings', label: 'Settings', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg> },
-    { key: 'live', label: 'Live', icon: <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.069A1 1 0 0121 8.867v6.266a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> },
+  const TAB_DEFS = [
+    { key: 'scores', label: 'Live Scores', icon: 'leaderboard' },
+    { key: 'quizzes', label: 'Quizzes', icon: 'quiz' },
+    { key: 'teams', label: 'Teams', icon: 'groups' },
+    { key: 'settings', label: 'Settings', icon: 'settings' },
+    { key: 'live', label: 'Live', icon: 'live_tv' },
   ];
+  const activeTabIndex = Math.max(0, TAB_DEFS.findIndex(t => t.key === tab));
 
   // Show login form if auth check is done but not authenticated as admin
   if (authChecked && !me) {
     return (
-      <div className="min-h-screen bg-brand-mesh flex items-center justify-center p-5 relative overflow-hidden">
-        <div className="brand-orb w-80 h-80 -top-16 -left-10 bg-brand-orange-soft/40" />
+      <div className="qz-page relative min-h-screen overflow-hidden flex items-center justify-center p-5">
         <div className="w-full max-w-sm relative z-10 animate-brand-fade-up">
           <div className="text-center mb-8">
             <div className="inline-flex mb-4">
               <LogoMark size="xl" className="shadow-brand rounded-[16px]" />
             </div>
-            <h1 className="font-display text-2xl font-bold text-brand-ink tracking-tight">Admin Portal</h1>
-            <p className="text-brand-ink-2 text-sm mt-1">Sign in to run Quizzy</p>
+            <h1 className="font-display text-2xl font-bold tracking-tight text-[var(--md-sys-color-on-surface)]">Admin Portal</h1>
+            <p className="text-sm mt-1 text-[var(--md-sys-color-on-surface-variant)]">Sign in to run Quizzy</p>
           </div>
-          <div className="bg-white/90 backdrop-blur-xl border border-white/70 rounded-apple-xl shadow-apple-md p-8">
-            <form onSubmit={handleAdminLogin} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-brand-ink-2 uppercase tracking-wide mb-1.5">Admin Password</label>
-                <input
-                  type="password"
-                  value={loginPassword}
-                  onChange={e => setLoginPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  autoFocus
-                  className="w-full px-4 py-2.5 bg-brand-surface border border-brand-line rounded-apple text-brand-ink text-sm focus:outline-none focus:ring-2 focus:ring-brand-orange focus:border-transparent transition-all"
-                />
-              </div>
-              {loginError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-apple px-4 py-2.5">{loginError}</div>
-              )}
-              <button
+          <MdCard variant="elevated" fullWidth style={{ padding: '1.75rem' }}>
+            <form onSubmit={handleAdminLogin} className="flex flex-col gap-4">
+              <MdTextField
+                variant="outlined"
+                label="Admin Password"
+                name="password"
+                type="password"
+                value={loginPassword}
+                required
+                passwordToggle="internal"
+                autocomplete="current-password"
+                onMdInput={(e) => setLoginPassword(e.detail ?? '')}
+                error={Boolean(loginError)}
+                errorText={loginError || undefined}
+                reserveSupportingSpace
+              />
+              <MdButton
                 type="submit"
-                disabled={loginLoading}
-                className="w-full bg-brand-orange text-white font-semibold py-3 rounded-apple text-sm hover:bg-brand-orange-deep transition-colors disabled:opacity-50 flex items-center justify-center gap-2 shadow-brand"
+                variant="filled"
+                size="md"
+                fullWidth
+                loading={loginLoading}
+                icon="login"
               >
-                {loginLoading ? (
-                  <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>Signing in…</>
-                ) : 'Sign In'}
-              </button>
+                Sign In
+              </MdButton>
             </form>
             <div className="mt-4 text-center">
-              <a href="/" className="text-xs text-brand-ink-3 hover:text-brand-orange transition-colors">← Back to contestant login</a>
+              <MdButton variant="text" size="sm" href="/">
+                Back to contestant login
+              </MdButton>
             </div>
-          </div>
+          </MdCard>
         </div>
       </div>
     );
@@ -2770,35 +2781,50 @@ function AdminPageInner() {
   // Show spinner while auth check is in flight
   if (!authChecked) {
     return (
-      <div className="min-h-screen bg-apple-gray flex items-center justify-center">
-        <svg className="animate-spin h-8 w-8 text-apple-blue" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>
+      <div className="min-h-screen flex items-center justify-center bg-[var(--md-sys-color-surface)]">
+        <MdLoadingIndicator label="Checking session" style={{ '--md-loading-indicator-size': '40px' }} />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-brand-surface">
+    <div className="min-h-screen bg-[var(--md-sys-color-surface)]" data-density="-1">
       <AppHeader
         href="/admin"
-        badge={<span className="text-[11px] font-semibold text-brand-orange bg-brand-mist border border-orange-200/70 px-2 py-0.5 rounded-md">Admin</span>}
+        badge={
+          <MdChip variant="suggestion" appearance="filled" color="primary" label="Admin" density="-2" />
+        }
         right={
           <>
-            {me && <span className="text-sm text-brand-ink-2 hidden sm:block">{me.username || 'Admin'}</span>}
-            <a href="/live" target="_blank" className="text-sm text-brand-ink-2 hover:text-brand-orange transition-colors font-medium hidden sm:block">Live Screen ↗</a>
-            <button onClick={logout} className="text-sm text-brand-ink-2 hover:text-brand-orange transition-colors font-medium">Sign Out</button>
+            {me && (
+              <span className="text-sm hidden sm:block text-[var(--md-sys-color-on-surface-variant)]">
+                {me.username || 'Admin'}
+              </span>
+            )}
+            <HeaderAction onClick={() => window.open('/live', '_blank')} icon="open_in_new" variant="text">Live Screen</HeaderAction>
+            <HeaderAction onClick={logout} icon="logout">Sign Out</HeaderAction>
           </>
         }
       />
 
       <div className="max-w-6xl mx-auto px-5 py-6">
-        <div className="flex items-center gap-1 bg-white border border-brand-line rounded-apple-lg p-1 shadow-apple-sm mb-7 w-fit overflow-x-auto">
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)} className={`flex items-center gap-2 px-4 py-2 rounded-apple text-sm font-semibold transition-all whitespace-nowrap ${tab === t.key ? 'bg-brand-orange text-white shadow-apple-sm' : 'text-brand-ink-2 hover:text-brand-ink hover:bg-brand-surface'}`}>
-              {t.icon}
-              <span className="hidden sm:inline">{t.label}</span>
-            </button>
-          ))}
+        <div className="mb-7 overflow-x-auto">
+          <MdTabs
+            activeTabIndex={activeTabIndex}
+            tabWidth="auto"
+            aria-label="Admin sections"
+            onMdTabChange={(e) => {
+              const idx = e.detail?.index ?? 0;
+              const next = TAB_DEFS[idx];
+              if (next) setTab(next.key);
+            }}
+          >
+            {TAB_DEFS.map(t => (
+              <MdTab key={t.key} label={t.label} icon={t.icon} inlineIcon density="-1" />
+            ))}
+          </MdTabs>
         </div>
+        <MdDivider style={{ marginBottom: '1.25rem' }} />
 
         {tab === 'scores' && <LiveScoresTab />}
         {tab === 'quizzes' && <QuizzesTab />}
