@@ -302,12 +302,12 @@ function AddQuestionModal({ quizId, sections, onClose, onAdded }) {
               </div>
               <div className="space-y-3">
                 {testCases.map((tc, i) => (
-                  <div key={i} className={`p-3 rounded-apple border ${tc.isHidden ? 'border-orange-200 bg-orange-50' : 'border-apple-gray-2 bg-white'}`}>
+                  <div key={i} className={`p-3 rounded-apple border ${tc.isHidden ? 'border-emerald-200 bg-emerald-50' : 'border-apple-gray-2 bg-white'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-apple-text-2">Test {i + 1}</span>
                       <div className="flex items-center gap-3">
                         <label className="flex items-center gap-1.5 cursor-pointer">
-                          <input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} className="accent-orange-500" />
+                          <input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} className="accent-emerald-700" />
                           <span className="text-xs text-apple-text-2">Hidden</span>
                         </label>
                         {testCases.length > 1 && (
@@ -1030,11 +1030,11 @@ function EditQuestionModal({ question, sections, onClose, onSaved }) {
               </div>
               <div className="space-y-3">
                 {testCases.map((tc, i) => (
-                  <div key={i} className={`p-3 rounded-apple border ${tc.isHidden ? 'border-orange-200 bg-orange-50' : 'border-apple-gray-2 bg-white'}`}>
+                  <div key={i} className={`p-3 rounded-apple border ${tc.isHidden ? 'border-emerald-200 bg-emerald-50' : 'border-apple-gray-2 bg-white'}`}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-bold text-apple-text-2">Test {i + 1}</span>
                       <div className="flex items-center gap-3">
-                        <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} className="accent-orange-500" /><span className="text-xs text-apple-text-2">Hidden</span></label>
+                        <label className="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" checked={tc.isHidden} onChange={e => updateTestCase(i, 'isHidden', e.target.checked)} className="accent-emerald-700" /><span className="text-xs text-apple-text-2">Hidden</span></label>
                         {testCases.length > 1 && <button onClick={() => setTestCases(p => p.filter((_, idx) => idx !== i))} className="text-apple-text-3 hover:text-apple-red"><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg></button>}
                       </div>
                     </div>
@@ -1209,7 +1209,7 @@ function QuizQuestionsPanel({ quiz, onBack }) {
                     {q.isReleased ? <span className="text-xs font-semibold text-apple-green">Released</span> : <span className="text-xs text-apple-text-3">Unreleased</span>}
                     {q.type === 'CODING' && <span className="text-xs bg-blue-100 text-apple-blue font-semibold px-1.5 py-0.5 rounded-full">Coding</span>}
                     {q.type !== 'CODING' && q.isMultiAnswer && <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-1.5 py-0.5 rounded-full">Multi</span>}
-                    {q.timeLimitSeconds && <span className="text-xs bg-orange-50 text-orange-600 font-semibold px-1.5 py-0.5 rounded-full">{q.timeLimitSeconds}s</span>}
+                    {q.timeLimitSeconds && <span className="text-xs bg-emerald-50 text-emerald-700 font-semibold px-1.5 py-0.5 rounded-full">{q.timeLimitSeconds}s</span>}
                     <span className="text-xs text-apple-text-3">{q.stats?.attempted || 0} responses</span>
                   </div>
                 </div>
@@ -1243,10 +1243,10 @@ function QuizQuestionsPanel({ quiz, onBack }) {
                         <p className="text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-2">Test Cases ({q.testCases.length})</p>
                         <div className="space-y-2">
                           {q.testCases.map((tc, ti) => (
-                            <div key={tc.id} className={`rounded-apple border p-3 text-xs font-mono ${tc.isHidden ? 'border-orange-200 bg-orange-50' : 'border-apple-gray-2 bg-white'}`}>
+                            <div key={tc.id} className={`rounded-apple border p-3 text-xs font-mono ${tc.isHidden ? 'border-emerald-200 bg-emerald-50' : 'border-apple-gray-2 bg-white'}`}>
                               <div className="flex items-center gap-2 mb-1">
                                 <span className="font-bold text-apple-text-2">Test {ti + 1}</span>
-                                {tc.isHidden && <span className="text-orange-600 font-semibold">Hidden</span>}
+                                {tc.isHidden && <span className="text-emerald-700 font-semibold">Hidden</span>}
                               </div>
                               {tc.input && <div><span className="text-apple-text-3">In: </span><span className="whitespace-pre-wrap text-apple-text">{tc.input}</span></div>}
                               <div><span className="text-apple-text-3">Expected: </span><span className="whitespace-pre-wrap text-apple-text">{tc.expectedOutput}</span></div>
@@ -1944,7 +1944,7 @@ function TeamsTab() {
                   </td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => toggleBan(team)} disabled={banning[team.id]} title={team.isBanned ? 'Unban' : 'Ban'} className={`p-1.5 transition-colors ${team.isBanned ? 'text-apple-green hover:text-green-600' : 'text-orange-400 hover:text-orange-600'}`}>
+                      <button onClick={() => toggleBan(team)} disabled={banning[team.id]} title={team.isBanned ? 'Unban' : 'Ban'} className={`p-1.5 transition-colors ${team.isBanned ? 'text-apple-green hover:text-green-600' : 'text-emerald-600 hover:text-emerald-700'}`}>
                         {team.isBanned
                           ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
                           : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>

@@ -3,11 +3,12 @@
 @tailwind utilities;
 
 :root {
-  --brand-orange: #F26207;
-  --brand-orange-soft: #FF8A4C;
-  --brand-ink: #191B1F;
-  --brand-surface: var(--md-sys-color-surface, #F5F6F8);
-  --brand-line: var(--md-sys-color-outline-variant, #D5D8DE);
+  /* WorkVar forest palette (legacy brand-* aliases map to forest) */
+  --brand-orange: #1A5D38;
+  --brand-orange-soft: #56D685;
+  --brand-ink: #1C1917;
+  --brand-surface: var(--md-sys-color-surface, #FAFAF9);
+  --brand-line: var(--md-sys-color-outline-variant, #D6D3D1);
 }
 
 *, *::before, *::after { box-sizing: border-box; }

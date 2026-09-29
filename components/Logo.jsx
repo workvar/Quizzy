@@ -11,7 +11,7 @@ const SIZES = {
   hero: 80,
 };
 
-/** Quizzy mark — stylized Q with quiz pointer, Replit-inspired orange gradient. */
+/** Quizzy mark — stylized Q with quiz pointer, WorkVar forest green. */
 export function LogoMark({ size = 'md', className = '' }) {
   const px = typeof size === 'number' ? size : (SIZES[size] || SIZES.md);
   const uid = useId().replace(/:/g, '');
@@ -28,9 +28,9 @@ export function LogoMark({ size = 'md', className = '' }) {
     >
       <defs>
         <linearGradient id={gradId} x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FF8A4C" />
-          <stop offset="0.55" stopColor="#F26207" />
-          <stop offset="1" stopColor="#E24A0F" />
+          <stop stopColor="#20914D" />
+          <stop offset="0.55" stopColor="#1A5D38" />
+          <stop offset="1" stopColor="#164C30" />
         </linearGradient>
       </defs>
       <rect width="64" height="64" rx="16" fill={`url(#${gradId})`} />

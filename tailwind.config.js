@@ -8,34 +8,35 @@ module.exports = {
     extend: {
       colors: {
         brand: {
-          orange: '#F26207',
-          'orange-soft': '#FF8A4C',
-          'orange-deep': '#E24A0F',
-          ink: '#191B1F',
-          'ink-2': '#5C6370',
-          'ink-3': '#8B93A1',
-          surface: '#F4F5F7',
+          // WorkVar forest green (aliases keep orange-* class names working)
+          orange: '#1A5D38',
+          'orange-soft': '#56D685',
+          'orange-deep': '#164C30',
+          ink: '#1C1917',
+          'ink-2': '#57534E',
+          'ink-3': '#78716C',
+          surface: '#FAFAF9',
           card: '#FFFFFF',
-          line: '#E6E8EC',
-          mist: '#FFF4EC',
+          line: '#D6D3D1',
+          mist: '#F2FDF4',
         },
         apple: {
-          // Remapped primary toward Replit-inspired orange for cohesive branding
-          blue: '#F26207',
-          green: '#22C55E',
+          // Remapped primary toward WorkVar forest green
+          blue: '#1A5D38',
+          green: '#20914D',
           red: '#EF4444',
-          orange: '#F26207',
+          orange: '#1A5D38',
           yellow: '#F59E0B',
           purple: '#7C3AED',
-          gray: '#F4F5F7',
-          'gray-2': '#E6E8EC',
-          'gray-3': '#D5D8DE',
-          'gray-4': '#C4C9D1',
-          'gray-5': '#A0A7B4',
-          'gray-6': '#8B93A1',
-          text: '#191B1F',
-          'text-2': '#5C6370',
-          'text-3': '#8B93A1',
+          gray: '#F5F5F4',
+          'gray-2': '#E7E5E4',
+          'gray-3': '#D6D3D1',
+          'gray-4': '#A8A29E',
+          'gray-5': '#78716C',
+          'gray-6': '#57534E',
+          text: '#1C1917',
+          'text-2': '#57534E',
+          'text-3': '#78716C',
         },
       },
       fontFamily: {
@@ -47,7 +48,7 @@ module.exports = {
         apple: '0 2px 8px rgba(25,27,31,0.06), 0 1px 2px rgba(25,27,31,0.04)',
         'apple-md': '0 8px 24px rgba(25,27,31,0.08), 0 2px 6px rgba(25,27,31,0.04)',
         'apple-lg': '0 16px 40px rgba(25,27,31,0.10), 0 4px 12px rgba(25,27,31,0.05)',
-        brand: '0 10px 40px rgba(242,98,7,0.18)',
+        brand: '0 10px 40px rgba(26,93,56,0.18)',
       },
       borderRadius: {
         apple: '10px',
@@ -57,7 +58,7 @@ module.exports = {
       },
       backgroundImage: {
         'brand-mesh':
-          'radial-gradient(1200px 600px at 10% -10%, rgba(255,138,76,0.28), transparent 55%), radial-gradient(900px 500px at 90% 10%, rgba(242,98,7,0.16), transparent 50%), radial-gradient(700px 400px at 50% 100%, rgba(255,196,150,0.22), transparent 55%), linear-gradient(180deg, #FFF8F3 0%, #F4F5F7 55%, #EEF0F4 100%)',
+          'radial-gradient(1200px 600px at 10% -10%, rgba(225,251,230,0.9), transparent 55%), radial-gradient(900px 500px at 90% 10%, rgba(195,245,205,0.45), transparent 50%), radial-gradient(700px 400px at 50% 100%, rgba(242,253,244,0.8), transparent 55%), linear-gradient(180deg, #F2FDF4 0%, #FAFAF9 55%, #F5F5F4 100%)',
       },
       keyframes: {
         brandFloat: {
