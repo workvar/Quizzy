@@ -1,11 +1,22 @@
 'use client';
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import {
+  MdButton,
+  MdCard,
+  MdChip,
+  MdRadio,
+  MdCheckbox,
+  MdLoadingIndicator,
+  MdAvatar,
+  MdSnackbar,
+  MdProgressIndicator,
+} from '@awc-ui/react';
 import Countdown from '@/components/Countdown';
 import NotificationBanner from '@/components/NotificationBanner';
 import AnswerChart from '@/components/AnswerChart';
 import CodeEditor from '@/components/CodeEditor';
-import AppHeader from '@/components/AppHeader';
+import AppHeader, { HeaderAction } from '@/components/AppHeader';
 
 function renderMd(text) {
   if (typeof window === 'undefined') return text;
@@ -24,44 +35,27 @@ function renderMd(text) {
     .replace(/<p><\/p>/g, '');
 }
 
-/* ─── Avatar ─── */
-function Avatar({ name, size = 8 }) {
-  const colors = ['#007AFF','#34C759','#FF9500','#FF3B30','#AF52DE','#FF2D55','#5AC8FA','#FFCC00'];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  const color = colors[Math.abs(hash) % colors.length];
-  const initials = name.split(/\s+/).map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  return (
-    <div className={`w-${size} h-${size} rounded-full flex items-center justify-center text-white font-bold flex-shrink-0 select-none`} style={{ background: color, fontSize: '0.7rem' }}>
-      {initials}
-    </div>
-  );
-}
-
 /* ─── Test case results panel ─── */
 function TestResultsPanel({ results, passed, total, running }) {
   if (running) {
     return (
       <div className="space-y-2">
         <div className="flex items-center gap-3 mb-3">
-          <div className="flex gap-1">
-            {[0,1,2].map(i => (
-              <div key={i} className="w-2 h-2 bg-apple-blue rounded-full" style={{ animation: `bounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-            ))}
-          </div>
-          <span className="text-xs font-semibold text-apple-text-2">Running your code against test cases…</span>
+          <MdLoadingIndicator label="Running tests" style={{ '--md-loading-indicator-size': '24px' }} />
+          <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)]">
+            Running your code against test cases…
+          </span>
         </div>
         {Array.from({ length: total || 2 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 p-3 border border-apple-gray-2 rounded-apple bg-white overflow-hidden relative" style={{ animation: `fadeSlideIn 0.3s ease-out ${i * 0.1}s both` }}>
-            <div className="absolute inset-0 bg-gradient-to-r from-apple-gray via-white to-apple-gray opacity-60" style={{ animation: 'shimmer 1.5s infinite', backgroundSize: '200% 100%' }} />
-            <div className="relative flex items-center gap-3 w-full">
-              <div className="w-5 h-5 rounded-full border-2 border-apple-blue/30 border-t-apple-blue flex-shrink-0" style={{ animation: 'spin 0.8s linear infinite' }} />
-              <div className="flex-1">
-                <div className="h-2.5 bg-apple-gray-3 rounded w-16 mb-1.5" />
-                <div className="h-2 bg-apple-gray-2 rounded w-3/4" />
+          <MdCard key={i} variant="outlined" fullWidth style={{ padding: '0.75rem' }}>
+            <div className="flex items-center gap-3">
+              <MdLoadingIndicator label="Test pending" style={{ '--md-loading-indicator-size': '20px' }} />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-2.5 rounded w-16 bg-[var(--md-sys-color-surface-container-high)]" />
+                <div className="h-2 rounded w-3/4 bg-[var(--md-sys-color-surface-container)]" />
               </div>
             </div>
-          </div>
+          </MdCard>
         ))}
       </div>
     );
@@ -70,23 +64,68 @@ function TestResultsPanel({ results, passed, total, running }) {
   return (
     <div className="space-y-2">
       {results.map((r, i) => (
-        <div key={i} className={`rounded-apple-md border overflow-hidden text-xs font-mono transition-all`} style={{ animation: `fadeSlideIn 0.25s ease-out ${i * 0.06}s both` }}>
-          <div className={`flex items-center justify-between px-3 py-2 ${r.passed ? 'bg-green-50 border-b border-apple-green/20' : 'bg-red-50 border-b border-apple-red/20'}`}>
+        <MdCard
+          key={i}
+          variant="outlined"
+          fullWidth
+          style={{
+            padding: 0,
+            overflow: 'hidden',
+            borderColor: r.passed
+              ? 'var(--md-sys-color-tertiary)'
+              : 'var(--md-sys-color-error)',
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-3 py-2"
+            style={{
+              background: r.passed
+                ? 'var(--md-sys-color-tertiary-container)'
+                : 'var(--md-sys-color-error-container)',
+            }}
+          >
             <div className="flex items-center gap-2">
-              <span className={`w-5 h-5 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 ${r.passed ? 'bg-apple-green' : 'bg-apple-red'}`}>{r.passed ? '✓' : '✗'}</span>
-              <span className={`font-bold text-sm ${r.passed ? 'text-apple-green' : 'text-apple-red'}`}>Test {i + 1}{r.hidden ? ' (hidden)' : ''}</span>
+              <span className="material-symbols-outlined text-base">
+                {r.passed ? 'check_circle' : 'cancel'}
+              </span>
+              <span className="font-bold text-sm">
+                Test {i + 1}{r.hidden ? ' (hidden)' : ''}
+              </span>
             </div>
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${r.passed ? 'text-apple-green bg-green-100' : 'text-apple-red bg-red-100'}`}>{r.passed ? 'Passed' : 'Failed'}</span>
+            <MdChip
+              variant="suggestion"
+              appearance="filled"
+              color={r.passed ? 'tertiary' : 'error'}
+              label={r.passed ? 'Passed' : 'Failed'}
+              density="-2"
+            />
           </div>
           {!r.hidden && (
-            <div className={`px-3 py-2.5 space-y-1.5 ${r.passed ? 'bg-green-50/40' : 'bg-red-50/40'}`}>
-              {r.input && <div><span className="text-apple-text-3 font-semibold">Input: </span><span className="text-apple-text whitespace-pre-wrap">{r.input}</span></div>}
-              <div><span className="text-apple-text-3 font-semibold">Expected: </span><span className="text-apple-text whitespace-pre-wrap">{r.expectedOutput}</span></div>
-              <div><span className="text-apple-text-3 font-semibold">Got: </span><span className={`whitespace-pre-wrap ${r.passed ? 'text-apple-text' : 'text-apple-red'}`}>{r.actualOutput || '(no output)'}</span></div>
-              {r.stderr && <div className="text-apple-red whitespace-pre-wrap border-t border-apple-red/10 pt-1.5 mt-1">{r.stderr}</div>}
+            <div className="px-3 py-2.5 space-y-1.5 text-xs font-mono">
+              {r.input && (
+                <div>
+                  <span className="text-[var(--md-sys-color-on-surface-variant)] font-semibold">Input: </span>
+                  <span className="whitespace-pre-wrap">{r.input}</span>
+                </div>
+              )}
+              <div>
+                <span className="text-[var(--md-sys-color-on-surface-variant)] font-semibold">Expected: </span>
+                <span className="whitespace-pre-wrap">{r.expectedOutput}</span>
+              </div>
+              <div>
+                <span className="text-[var(--md-sys-color-on-surface-variant)] font-semibold">Got: </span>
+                <span className={`whitespace-pre-wrap ${r.passed ? '' : 'text-[var(--md-sys-color-error)]'}`}>
+                  {r.actualOutput || '(no output)'}
+                </span>
+              </div>
+              {r.stderr && (
+                <div className="text-[var(--md-sys-color-error)] whitespace-pre-wrap border-t border-[var(--md-sys-color-outline-variant)] pt-1.5 mt-1">
+                  {r.stderr}
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </MdCard>
       ))}
     </div>
   );
@@ -102,7 +141,6 @@ function CodingQuestion({ question, qid, result, onResult, timeLeft, isSubmitted
   const [runResults, setRunResults] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Init starter code when question/language changes
   useEffect(() => {
     if (question?.starterCode?.[language]) {
       setCode(question.starterCode[language]);
@@ -112,7 +150,6 @@ function CodingQuestion({ question, qid, result, onResult, timeLeft, isSubmitted
     setRunResults(null);
   }, [question?.id, language]);
 
-  // If already submitted, show submitted code
   useEffect(() => {
     if (question?.submitted && question.submittedCode) {
       setCode(question.submittedCode);
@@ -172,77 +209,92 @@ function CodingQuestion({ question, qid, result, onResult, timeLeft, isSubmitted
         allowedLanguages={allowedLanguages}
       />
 
-      {/* Visible test cases reference */}
       {!isSubmitted && question?.visibleTestCases?.length > 0 && (
         <div>
-          <p className="text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-2">Sample Cases</p>
+          <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wide mb-2">
+            Sample Cases
+          </p>
           <div className="space-y-2">
-            {question.visibleTestCases.map((tc, i) => (
-              <div key={tc.id} className="bg-apple-gray border border-apple-gray-2 rounded-apple p-3 text-xs font-mono">
-                {tc.input && (
-                  <div><span className="text-apple-text-3">Input: </span><span className="text-apple-text whitespace-pre-wrap">{tc.input}</span></div>
-                )}
-                <div><span className="text-apple-text-3">Expected: </span><span className="text-apple-text whitespace-pre-wrap">{tc.expectedOutput}</span></div>
-              </div>
+            {question.visibleTestCases.map((tc) => (
+              <MdCard key={tc.id} variant="filled" fullWidth style={{ padding: '0.75rem' }}>
+                <div className="text-xs font-mono space-y-1">
+                  {tc.input && (
+                    <div>
+                      <span className="text-[var(--md-sys-color-on-surface-variant)]">Input: </span>
+                      <span className="whitespace-pre-wrap">{tc.input}</span>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-[var(--md-sys-color-on-surface-variant)]">Expected: </span>
+                    <span className="whitespace-pre-wrap">{tc.expectedOutput}</span>
+                  </div>
+                </div>
+              </MdCard>
             ))}
           </div>
         </div>
       )}
 
-      {/* Run results */}
       {(running || runResults) && (
         <div>
-          <p className="text-xs font-semibold text-apple-text-2 uppercase tracking-wide mb-2">
+          <p className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wide mb-2">
             {running ? 'Running…' : `Results: ${runResults?.passed ?? 0}/${runResults?.total ?? 0} passed`}
           </p>
           {runResults?.error ? (
-            <div className="text-sm text-apple-red bg-red-50 border border-red-200 rounded-apple p-3">{runResults.error}</div>
+            <MdCard variant="outlined" fullWidth style={{ padding: '0.75rem', borderColor: 'var(--md-sys-color-error)' }}>
+              <p className="text-sm text-[var(--md-sys-color-error)]">{runResults.error}</p>
+            </MdCard>
           ) : (
             <TestResultsPanel results={runResults?.results} passed={runResults?.passed} total={runResults?.total} running={running} />
           )}
         </div>
       )}
 
-      {/* Submit results */}
       {isSubmitted && (
-        <div className={`rounded-apple-md border p-4 ${result?.isCorrect || question?.isCorrect ? 'border-apple-green bg-green-50' : 'border-apple-red bg-red-50'}`}>
+        <MdCard
+          variant="outlined"
+          fullWidth
+          style={{
+            padding: '1rem',
+            borderColor: (result?.isCorrect || question?.isCorrect)
+              ? 'var(--md-sys-color-tertiary)'
+              : 'var(--md-sys-color-error)',
+          }}
+        >
           <div className="flex items-center justify-between mb-3">
-            <span className={`font-bold text-sm ${result?.isCorrect || question?.isCorrect ? 'text-apple-green' : 'text-apple-red'}`}>
-              {result?.isCorrect || question?.isCorrect ? '✓ All tests passed!' : '✗ Some tests failed'}
+            <span className={`font-bold text-sm ${(result?.isCorrect || question?.isCorrect) ? 'text-[var(--md-sys-color-tertiary)]' : 'text-[var(--md-sys-color-error)]'}`}>
+              {result?.isCorrect || question?.isCorrect ? 'All tests passed!' : 'Some tests failed'}
             </span>
-            <span className="text-sm font-bold text-apple-blue">
+            <span className="text-sm font-bold text-[var(--md-sys-color-primary)]">
               {passed}/{total} tests · +{result?.score ?? question?.score ?? 0} pts
             </span>
           </div>
           {result?.testResults && (
             <TestResultsPanel results={result.testResults} passed={passed} total={total} running={false} />
           )}
-        </div>
+        </MdCard>
       )}
 
-      {/* Action buttons */}
       {!isSubmitted && (
         <div className="flex items-center gap-3">
-          <button
-            onClick={runCode}
+          <MdButton
+            variant="outlined"
+            icon="play_arrow"
+            onMdClick={runCode}
             disabled={!code.trim() || running || timeLeft === 0}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-white border border-apple-gray-3 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors disabled:opacity-50 text-apple-text shadow-apple-sm"
+            loading={running}
           >
-            {running ? (
-              <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>Running…</>
-            ) : (
-              <><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Run Tests</>
-            )}
-          </button>
-          <button
-            onClick={submit}
+            {running ? 'Running…' : 'Run Tests'}
+          </MdButton>
+          <MdButton
+            variant="filled"
+            icon="send"
+            onMdClick={submit}
             disabled={!code.trim() || submitting || timeLeft === 0}
-            className="flex items-center gap-2 bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-brand-orange-deep active:bg-blue-700 transition-colors disabled:opacity-50"
+            loading={submitting}
           >
-            {submitting ? (
-              <><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>Submitting…</>
-            ) : 'Submit Solution'}
-          </button>
+            {submitting ? 'Submitting…' : 'Submit Solution'}
+          </MdButton>
         </div>
       )}
     </div>
@@ -286,7 +338,6 @@ function QuestionContent() {
 
   useEffect(() => { loadQuestion(); }, [qid]);
 
-  // Countdown timer
   useEffect(() => {
     if (!question?.timeLimitSeconds || !question?.releasedAt || result) { setTimeLeft(null); return; }
     const calc = () => {
@@ -298,7 +349,6 @@ function QuestionContent() {
     return () => clearInterval(id);
   }, [question?.id, question?.releasedAt, result]);
 
-  // Auto-submit for MCQ when timer hits 0
   useEffect(() => {
     if (timeLeft === 0 && !result && !submitting && !autoSubmittedRef.current && question?.type !== 'CODING') {
       autoSubmittedRef.current = true;
@@ -334,86 +384,113 @@ function QuestionContent() {
   };
 
   const timerColor = timeLeft === null ? null
-    : timeLeft > (question?.timeLimitSeconds || 0) * 0.5 ? 'text-apple-green'
-    : timeLeft > (question?.timeLimitSeconds || 0) * 0.25 ? 'text-orange-500'
-    : 'text-apple-red';
+    : timeLeft > (question?.timeLimitSeconds || 0) * 0.5 ? 'text-[var(--md-sys-color-tertiary)]'
+    : timeLeft > (question?.timeLimitSeconds || 0) * 0.25 ? 'text-[var(--md-sys-color-primary)]'
+    : 'text-[var(--md-sys-color-error)]';
 
-  if (loading) return (
-    <div className="flex justify-center py-24">
-      <svg className="animate-spin h-8 w-8 text-apple-blue" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>
-    </div>
-  );
+  if (loading) {
+    return (
+      <div className="flex justify-center py-24">
+        <MdLoadingIndicator label="Loading question" style={{ '--md-loading-indicator-size': '40px' }} />
+      </div>
+    );
+  }
 
-  if (error) return (
-    <div className="text-center py-24">
-      <p className="text-apple-red font-semibold">{error}</p>
-      <a href="/contestant" className="text-apple-blue text-sm mt-4 inline-block">← Back to Questions</a>
-    </div>
-  );
+  if (error) {
+    return (
+      <div className="text-center py-24">
+        <p className="text-[var(--md-sys-color-error)] font-semibold">{error}</p>
+        <div className="mt-4 flex justify-center">
+          <MdButton variant="text" href="/contestant" icon="arrow_back">Back to Questions</MdButton>
+        </div>
+      </div>
+    );
+  }
 
   const isSubmitted = !!result || question?.submitted;
   const isCoding = question?.type === 'CODING';
   const optionStats = result?.optionStats || question?.optionStats;
   const totalAnswered = result?.totalAnswered ?? question?.totalAnswered ?? 0;
   const correctOptions = result?.correctOptions || question?.correctOptions || [];
+  const progressValue = question?.timeLimitSeconds
+    ? Math.max(0, (timeLeft / question.timeLimitSeconds) * 100)
+    : 0;
 
   return (
-    <div className="max-w-5xl mx-auto px-5 py-6">
-      {/* Header */}
+    <div className="max-w-5xl mx-auto px-5 py-6 relative">
       <div className="flex items-center justify-between mb-6">
-        <a href="/contestant" className="flex items-center gap-1.5 text-sm text-apple-text-2 hover:text-apple-blue transition-colors font-medium">
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
+        <MdButton variant="text" href="/contestant" icon="arrow_back" size="sm">
           Questions
-        </a>
+        </MdButton>
 
-        {/* Large timer — center */}
         {timeLeft !== null && !isSubmitted && (
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none">
-            <span className={`text-4xl font-black tabular-nums tracking-tight ${timerColor}`} style={{ fontVariantNumeric: 'tabular-nums', textShadow: timeLeft <= (question?.timeLimitSeconds || 0) * 0.25 ? '0 0 20px rgba(255,59,48,0.3)' : 'none' }}>
+            <span className={`text-4xl font-black tabular-nums tracking-tight ${timerColor}`}>
               {timeLeft}
             </span>
-            <span className={`text-xs font-semibold uppercase tracking-widest ${timerColor} opacity-60`}>{timeLeft === 0 ? "Time's up!" : 'seconds left'}</span>
+            <span className={`text-xs font-semibold uppercase tracking-widest ${timerColor} opacity-60`}>
+              {timeLeft === 0 ? "Time's up!" : 'seconds left'}
+            </span>
           </div>
         )}
 
         <div className="flex items-center gap-3">
           {question && (
-            <span className="text-xs text-apple-text-3 font-medium bg-apple-gray border border-apple-gray-2 px-2.5 py-1 rounded-full">{question.questionNumber} / {question.totalQuestions}</span>
+            <MdChip
+              variant="suggestion"
+              appearance="outlined"
+              label={`${question.questionNumber} / ${question.totalQuestions}`}
+              density="-2"
+            />
           )}
-          {me && <Avatar name={me.teamName} size={8} />}
+          {me && <MdAvatar name={me.teamName} size="32" label={me.teamName} />}
         </div>
       </div>
 
       <div className="flex flex-col gap-6">
-        {/* Question header */}
         <div>
           <div className="flex items-center gap-2 mb-3 flex-wrap">
-            <span className="text-xs font-semibold text-apple-text-3 uppercase tracking-wide">Question {question?.questionNumber}</span>
+            <span className="text-xs font-semibold text-[var(--md-sys-color-on-surface-variant)] uppercase tracking-wide">
+              Question {question?.questionNumber}
+            </span>
             {isCoding && (
-              <span className="text-xs bg-blue-100 text-apple-blue font-semibold px-2.5 py-0.5 rounded-full">Coding</span>
+              <MdChip variant="suggestion" appearance="filled" color="primary" label="Coding" density="-2" />
             )}
             {!isCoding && question?.isMultiAnswer && (
-              <span className="text-xs bg-purple-100 text-purple-600 font-semibold px-2.5 py-0.5 rounded-full">Select all that apply</span>
+              <MdChip variant="suggestion" appearance="filled" color="tertiary" label="Select all that apply" density="-2" />
             )}
             {isSubmitted && (
-              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${(result?.isCorrect ?? question?.isCorrect) ? 'bg-green-100 text-apple-green' : 'bg-red-100 text-apple-red'}`}>
-                {(result?.isCorrect ?? question?.isCorrect) ? `✓ Correct · +${result?.score ?? question?.score} pts` : `✗ Incorrect · +${result?.score ?? question?.score ?? 0} pts`}
-              </span>
+              <MdChip
+                variant="suggestion"
+                appearance="filled"
+                color={(result?.isCorrect ?? question?.isCorrect) ? 'tertiary' : 'error'}
+                label={(result?.isCorrect ?? question?.isCorrect)
+                  ? `Correct · +${result?.score ?? question?.score} pts`
+                  : `Incorrect · +${result?.score ?? question?.score ?? 0} pts`}
+                density="-2"
+              />
             )}
             {timeLeft !== null && !isSubmitted && question?.timeLimitSeconds && (
-              <div className="w-full mt-2 h-1.5 bg-apple-gray-2 rounded-full overflow-hidden">
-                <div className={`h-full rounded-full transition-all duration-1000 linear ${timeLeft > question.timeLimitSeconds * 0.5 ? 'bg-apple-green' : timeLeft > question.timeLimitSeconds * 0.25 ? 'bg-orange-400' : 'bg-apple-red'}`} style={{ width: `${Math.max(0, (timeLeft / question.timeLimitSeconds) * 100)}%` }} />
+              <div className="w-full mt-2">
+                <MdProgressIndicator
+                  variant="linear"
+                  value={progressValue}
+                  max={100}
+                  label="Time remaining"
+                  thickness={4}
+                />
               </div>
             )}
           </div>
 
-          {/* Question content */}
-          <div className="bg-white/80 backdrop-blur-sm border border-white/60 rounded-apple-lg p-6 mb-5 shadow-apple-sm" style={{ boxShadow: '0 4px 24px rgba(0,0,0,0.06), 0 0 0 1px rgba(255,255,255,0.5) inset' }}>
-            <div className="md-content text-apple-text text-sm leading-relaxed" dangerouslySetInnerHTML={{ __html: renderMd(question?.content || '') }} />
-          </div>
+          <MdCard variant="elevated" fullWidth style={{ padding: '1.5rem', marginBottom: '1.25rem' }}>
+            <div
+              className="md-content text-sm leading-relaxed text-[var(--md-sys-color-on-surface)]"
+              dangerouslySetInnerHTML={{ __html: renderMd(question?.content || '') }}
+            />
+          </MdCard>
         </div>
 
-        {/* Coding or MCQ body */}
         {isCoding ? (
           <CodingQuestion
             question={question}
@@ -426,7 +503,6 @@ function QuestionContent() {
         ) : (
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="flex-1 min-w-0">
-              {/* Options */}
               <div className="space-y-2.5 mb-6">
                 {question?.options?.map((opt, i) => {
                   const isSelected = selected.includes(opt.id);
@@ -434,55 +510,132 @@ function QuestionContent() {
                   const isWrong = isSubmitted && isSelected && !isCorrect;
                   const letter = String.fromCharCode(65 + i);
 
-                  let classes = 'border border-apple-gray-2 bg-white';
+                  let borderColor = 'var(--md-sys-color-outline-variant)';
+                  let bg = 'var(--md-sys-color-surface-container-lowest)';
                   if (isSubmitted) {
-                    if (isCorrect) classes = 'border-apple-green bg-green-50';
-                    else if (isWrong) classes = 'border-apple-red bg-red-50';
-                    else if (isSelected) classes = 'border-apple-gray-3 bg-apple-gray';
-                  } else {
-                    if (isSelected) classes = 'border-apple-blue bg-blue-50';
-                    else classes = 'border-apple-gray-2 bg-white hover:border-apple-blue hover:bg-blue-50/50 cursor-pointer';
+                    if (isCorrect) {
+                      borderColor = 'var(--md-sys-color-tertiary)';
+                      bg = 'var(--md-sys-color-tertiary-container)';
+                    } else if (isWrong) {
+                      borderColor = 'var(--md-sys-color-error)';
+                      bg = 'var(--md-sys-color-error-container)';
+                    }
+                  } else if (isSelected) {
+                    borderColor = 'var(--md-sys-color-primary)';
+                    bg = 'var(--md-sys-color-primary-container)';
                   }
 
                   return (
-                    <div key={opt.id} className={`flex items-start gap-3 rounded-apple-md p-4 transition-all ${classes}`} onClick={() => !isSubmitted && toggleOption(opt.id)}>
-                      <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${isSubmitted ? isCorrect ? 'bg-apple-green text-white' : isWrong ? 'bg-apple-red text-white' : 'bg-apple-gray-3 text-apple-text-2' : isSelected ? 'bg-apple-blue text-white' : 'bg-apple-gray-2 text-apple-text-2'}`}>{letter}</div>
-                      <div className={`flex-1 text-sm leading-relaxed md-content ${isSubmitted && isCorrect ? 'text-green-800 font-medium' : isWrong ? 'text-red-800' : 'text-apple-text'}`} dangerouslySetInnerHTML={{ __html: renderMd(opt.content) }} />
-                      {isSubmitted && isCorrect && <svg className="w-5 h-5 text-apple-green flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>}
-                      {isWrong && <svg className="w-5 h-5 text-apple-red flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12"/></svg>}
+                    <div
+                      key={opt.id}
+                      role="button"
+                      tabIndex={isSubmitted ? -1 : 0}
+                      className="flex items-start gap-3 rounded-[var(--md-sys-shape-corner-medium,12px)] p-4 transition-all"
+                      style={{
+                        border: `1px solid ${borderColor}`,
+                        background: bg,
+                        cursor: isSubmitted ? 'default' : 'pointer',
+                      }}
+                      onClick={() => !isSubmitted && toggleOption(opt.id)}
+                      onKeyDown={(e) => {
+                        if (!isSubmitted && (e.key === 'Enter' || e.key === ' ')) {
+                          e.preventDefault();
+                          toggleOption(opt.id);
+                        }
+                      }}
+                    >
+                      <div className="flex-shrink-0 pt-0.5" onClick={(e) => e.stopPropagation()}>
+                        {question?.isMultiAnswer ? (
+                          <MdCheckbox
+                            name="mcq-options"
+                            value={String(opt.id)}
+                            checked={isSelected}
+                            disabled={isSubmitted}
+                            aria-label={`Option ${letter}`}
+                            onMdChange={() => toggleOption(opt.id)}
+                          />
+                        ) : (
+                          <MdRadio
+                            name="mcq-option"
+                            value={String(opt.id)}
+                            checked={isSelected}
+                            disabled={isSubmitted}
+                            aria-label={`Option ${letter}`}
+                            onMdChange={() => toggleOption(opt.id)}
+                          />
+                        )}
+                      </div>
+                      <span className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold bg-[var(--md-sys-color-surface-container-high)] text-[var(--md-sys-color-on-surface-variant)]">
+                        {letter}
+                      </span>
+                      <div
+                        className="flex-1 text-sm leading-relaxed md-content"
+                        dangerouslySetInnerHTML={{ __html: renderMd(opt.content) }}
+                      />
+                      {isSubmitted && isCorrect && (
+                        <span className="material-symbols-outlined text-[var(--md-sys-color-tertiary)]">check_circle</span>
+                      )}
+                      {isWrong && (
+                        <span className="material-symbols-outlined text-[var(--md-sys-color-error)]">cancel</span>
+                      )}
                     </div>
                   );
                 })}
               </div>
 
-              {/* Submit / Nav */}
               <div className="flex items-center gap-3 flex-wrap">
                 {!isSubmitted && (
-                  <button onClick={() => submitMCQ()} disabled={!selected.length || submitting || timeLeft === 0} className="bg-apple-blue text-white font-semibold px-6 py-2.5 rounded-apple text-sm hover:bg-brand-orange-deep active:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2">
-                    {submitting ? (<><svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg>Submitting…</>) : 'Submit Answer'}
-                  </button>
+                  <MdButton
+                    variant="filled"
+                    icon="send"
+                    onMdClick={() => submitMCQ()}
+                    disabled={!selected.length || submitting || timeLeft === 0}
+                    loading={submitting}
+                  >
+                    {submitting ? 'Submitting…' : 'Submit Answer'}
+                  </MdButton>
                 )}
-                {question?.prevId && (<a href={`/contestant/question?id=${question.prevId}`} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-4 py-2.5 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors shadow-apple-sm"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>Previous</a>)}
-                {question?.nextId && (<a href={`/contestant/question?id=${question.nextId}`} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2.5 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm ml-auto">Next Question<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg></a>)}
+                {question?.prevId && (
+                  <MdButton variant="outlined" href={`/contestant/question?id=${question.prevId}`} icon="chevron_left">
+                    Previous
+                  </MdButton>
+                )}
+                {question?.nextId && (
+                  <MdButton variant="filled" href={`/contestant/question?id=${question.nextId}`} trailingIcon="chevron_right" className="ml-auto">
+                    Next Question
+                  </MdButton>
+                )}
               </div>
             </div>
 
-            {/* Right: Chart */}
             {isSubmitted && question?.options && (
               <div className="lg:w-72 flex-shrink-0">
-                <div className="bg-white border border-apple-gray-2 rounded-apple-lg p-5 shadow-apple-sm sticky top-20">
-                  <AnswerChart options={question.options} optionStats={optionStats} totalAnswered={totalAnswered} correctOptions={correctOptions} selectedOptions={selected} />
-                </div>
+                <MdCard variant="outlined" fullWidth style={{ padding: '1.25rem', position: 'sticky', top: '5rem' }}>
+                  <AnswerChart
+                    options={question.options}
+                    optionStats={optionStats}
+                    totalAnswered={totalAnswered}
+                    correctOptions={correctOptions}
+                    selectedOptions={selected}
+                  />
+                </MdCard>
               </div>
             )}
           </div>
         )}
 
-        {/* Nav for coding */}
         {isCoding && (
           <div className="flex items-center gap-3 flex-wrap">
-            {question?.prevId && (<a href={`/contestant/question?id=${question.prevId}`} className="flex items-center gap-1.5 text-sm font-semibold text-apple-text-2 bg-white border border-apple-gray-2 px-4 py-2.5 rounded-apple hover:border-apple-blue hover:text-apple-blue transition-colors shadow-apple-sm"><svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>Previous</a>)}
-            {question?.nextId && (<a href={`/contestant/question?id=${question.nextId}`} className="flex items-center gap-1.5 text-sm font-semibold text-white bg-apple-blue px-4 py-2.5 rounded-apple hover:bg-brand-orange-deep transition-colors shadow-apple-sm ml-auto">Next Question<svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg></a>)}
+            {question?.prevId && (
+              <MdButton variant="outlined" href={`/contestant/question?id=${question.prevId}`} icon="chevron_left">
+                Previous
+              </MdButton>
+            )}
+            {question?.nextId && (
+              <MdButton variant="filled" href={`/contestant/question?id=${question.nextId}`} trailingIcon="chevron_right" className="ml-auto">
+                Next Question
+              </MdButton>
+            )}
           </div>
         )}
       </div>
@@ -492,24 +645,18 @@ function QuestionContent() {
 
 /* ─── Admin message toast ─── */
 function MessageToast({ messages, onDismiss }) {
-  if (!messages.length) return null;
+  const current = messages[0];
+  if (!current) return null;
   return (
-    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 pointer-events-none w-full max-w-md px-4">
-      {messages.map(m => (
-        <div key={m.id} className="notify-in bg-white border border-apple-gray-2 rounded-apple-md shadow-apple-lg px-4 py-3 flex items-start gap-3 pointer-events-auto">
-          <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-            <svg className="w-3.5 h-3.5 text-apple-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-apple-blue uppercase tracking-wide">Admin Message</p>
-            <p className="text-sm text-apple-text mt-0.5 break-words">{m.content}</p>
-          </div>
-          <button onClick={() => onDismiss(m.id)} className="text-apple-text-3 hover:text-apple-text flex-shrink-0 mt-0.5">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-      ))}
-    </div>
+    <MdSnackbar
+      open
+      position="bottom"
+      autoHideDuration={10000}
+      closeable
+      onMdClose={() => onDismiss(current.id)}
+    >
+      Admin: {current.content}
+    </MdSnackbar>
   );
 }
 
@@ -549,7 +696,7 @@ export default function QuestionPage() {
   };
 
   return (
-    <>
+    <div className="qz-surface min-h-screen">
       <NotificationBanner />
       <MessageToast messages={messages} onDismiss={id => setMessages(prev => prev.filter(m => m.id !== id))} />
       <AppHeader
@@ -557,20 +704,26 @@ export default function QuestionPage() {
         maxWidthClass="max-w-5xl"
         right={
           <>
+            {me && (
+              <span className="text-sm text-[var(--md-sys-color-on-surface-variant)] hidden sm:block font-medium">
+                {me.teamName}
+              </span>
+            )}
             {endTime && <Countdown endTime={endTime} />}
-            <button onClick={logout} className="text-sm text-brand-ink-2 hover:text-brand-orange transition-colors font-medium">Sign Out</button>
-            {me && <Avatar name={me.teamName} size={8} />}
+            <HeaderAction onClick={logout} icon="logout">Sign Out</HeaderAction>
+            {me && <MdAvatar name={me.teamName} size="32" label={me.teamName} />}
           </>
         }
       />
-      <style>{`
-        @keyframes fadeSlideIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes bounce { 0%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-6px); } }
-        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-      `}</style>
-      <Suspense fallback={<div className="flex justify-center py-24"><svg className="animate-spin h-8 w-8 text-brand-orange" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.4 0 0 5.4 0 12h4z"/></svg></div>}>
+      <Suspense
+        fallback={
+          <div className="flex justify-center py-24">
+            <MdLoadingIndicator label="Loading" style={{ '--md-loading-indicator-size': '40px' }} />
+          </div>
+        }
+      >
         <QuestionContent />
       </Suspense>
-    </>
+    </div>
   );
 }

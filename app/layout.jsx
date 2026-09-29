@@ -1,4 +1,7 @@
 import './globals.css';
+import '@awc-ui/core/css/tokens.css';
+import './theme.css';
+import 'material-symbols/outlined.css';
 import { DialogProvider } from '@/components/DialogProvider';
 import { Plus_Jakarta_Sans, Sora } from 'next/font/google';
 

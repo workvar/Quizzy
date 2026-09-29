@@ -13,6 +13,8 @@
     "postinstall": "prisma generate"
   },
   "dependencies": {
+    "@awc-ui/core": "^1.0.1",
+    "@awc-ui/react": "^1.0.1",
     "@monaco-editor/react": "^4.7.0",
     "@prisma/client": "^5.14.0",
     "csv-parse": "^5.5.3",
@@ -24,7 +26,10 @@
     "socket.io-client": "^4.7.5"
   },
   "devDependencies": {
+    "@awc-ui/theme": "^1.0.1",
+    "@awc-ui/tokens": "^1.0.1",
     "autoprefixer": "^10.4.19",
+    "material-symbols": "^0.47.5",
     "postcss": "^8.4.38",
     "prisma": "^5.14.0",
     "tailwindcss": "^3.4.4"

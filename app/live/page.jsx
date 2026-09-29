@@ -1,5 +1,11 @@
 'use client';
 import { useEffect, useState, useRef } from 'react';
+import {
+  MdChip,
+  MdProgressIndicator,
+  MdStatusDot,
+  MdLoadingIndicator,
+} from '@awc-ui/react';
 import { LogoMark } from '@/components/Logo';
 
 function renderMd(text) {
@@ -22,7 +28,11 @@ function RankBadge({ rank }) {
   if (rank === 1) return <span className="text-2xl">🥇</span>;
   if (rank === 2) return <span className="text-2xl">🥈</span>;
   if (rank === 3) return <span className="text-2xl">🥉</span>;
-  return <span className="text-lg font-bold text-slate-400 w-8 text-center">#{rank}</span>;
+  return (
+    <span className="text-lg font-bold w-8 text-center text-[var(--md-sys-color-on-surface-variant)]">
+      #{rank}
+    </span>
+  );
 }
 
 function CountdownRing({ timeLeft, totalTime }) {
@@ -30,13 +40,24 @@ function CountdownRing({ timeLeft, totalTime }) {
   const circ = 2 * Math.PI * r;
   const pct = totalTime > 0 ? Math.max(0, timeLeft / totalTime) : 0;
   const dash = pct * circ;
-  const color = pct > 0.5 ? '#34C759' : pct > 0.25 ? '#FF9500' : '#FF3B30';
+  const color = pct > 0.5
+    ? 'var(--md-sys-color-tertiary)'
+    : pct > 0.25
+      ? 'var(--md-sys-color-primary)'
+      : 'var(--md-sys-color-error)';
   return (
     <div className="relative w-20 h-20 flex items-center justify-center flex-shrink-0">
       <svg className="absolute inset-0 -rotate-90" width="80" height="80">
-        <circle cx="40" cy="40" r={r} stroke="rgba(255,255,255,0.1)" strokeWidth="5" fill="none" />
-        <circle cx="40" cy="40" r={r} stroke={color} strokeWidth="5" fill="none"
-          strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        <circle cx="40" cy="40" r={r} stroke="var(--md-sys-color-outline-variant)" strokeWidth="5" fill="none" />
+        <circle
+          cx="40"
+          cy="40"
+          r={r}
+          stroke={color}
+          strokeWidth="5"
+          fill="none"
+          strokeDasharray={`${dash} ${circ}`}
+          strokeLinecap="round"
           style={{ transition: 'stroke-dasharray 0.9s linear, stroke 0.3s' }}
         />
       </svg>
@@ -63,7 +84,6 @@ export default function LiveScreen() {
   const feedRef = useRef(null);
   const socketRef = useRef(null);
 
-  // Countdown timer effect
   useEffect(() => {
     const q = state.currentQuestion;
     if (!q?.timeLimitSeconds || !q?.releasedAt) {
@@ -193,31 +213,56 @@ export default function LiveScreen() {
   const submittedList = (allTeams || []).filter(t => submittedSet.has(t.id));
   const pendingList = (allTeams || []).filter(t => !submittedSet.has(t.id));
   const totalTeams = (allTeams || []).length;
+  const submissionPct = totalTeams > 0 ? Math.round((submittedList.length / totalTeams) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#0E1014] text-white flex flex-col overflow-hidden font-sans">
-      {/* Header */}
-      <header className="flex items-center justify-between px-6 sm:px-8 py-3 border-b border-white/10 flex-shrink-0 relative bg-white/[0.03] backdrop-blur-xl">
+    <div
+      data-theme="dark"
+      className="min-h-screen flex flex-col overflow-hidden font-sans bg-[var(--md-sys-color-surface)] text-[var(--md-sys-color-on-surface)]"
+    >
+      <header
+        className="flex items-center justify-between px-6 sm:px-8 py-3 flex-shrink-0 relative"
+        style={{
+          borderBottom: '1px solid var(--md-sys-color-outline-variant)',
+          background: 'var(--md-sys-color-surface-container)',
+        }}
+      >
         <div className="flex items-center gap-3 min-w-0">
           <LogoMark size={28} />
           <div className="min-w-0">
-            <p className="font-display text-lg sm:text-xl font-bold tracking-tight text-white truncate">
+            <p className="font-display text-lg sm:text-xl font-bold tracking-tight truncate text-[var(--md-sys-color-on-surface)]">
               {activeQuizTitle || 'Quizzy Live'}
             </p>
-            <p className="text-[10px] uppercase tracking-[0.18em] text-white/35 font-semibold">Live Arena</p>
+            <p className="text-[10px] uppercase tracking-[0.18em] font-semibold text-[var(--md-sys-color-on-surface-variant)]">
+              Live Arena
+            </p>
           </div>
         </div>
 
-        {/* Large center timer */}
         {currentQuestion?.timeLimitSeconds && timeLeft !== null && (
           <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
             {(() => {
               const pct = currentQuestion.timeLimitSeconds > 0 ? timeLeft / currentQuestion.timeLimitSeconds : 0;
-              const color = pct > 0.5 ? '#22C55E' : pct > 0.25 ? '#F59E0B' : '#EF4444';
+              const color = pct > 0.5
+                ? 'var(--md-sys-color-tertiary)'
+                : pct > 0.25
+                  ? 'var(--md-sys-color-primary)'
+                  : 'var(--md-sys-color-error)';
               return (
                 <>
-                  <span className="text-5xl font-black tabular-nums font-display" style={{ color, textShadow: pct < 0.25 ? `0 0 30px ${color}60` : 'none', transition: 'color 0.3s, text-shadow 0.3s' }}>{timeLeft}</span>
-                  <span className="text-xs font-semibold uppercase tracking-widest text-white/30 mt-0.5">{timeLeft === 0 ? "Time's Up" : 'seconds'}</span>
+                  <span
+                    className="text-5xl font-black tabular-nums font-display"
+                    style={{
+                      color,
+                      textShadow: pct < 0.25 ? `0 0 30px color-mix(in srgb, ${color} 40%, transparent)` : 'none',
+                      transition: 'color 0.3s, text-shadow 0.3s',
+                    }}
+                  >
+                    {timeLeft}
+                  </span>
+                  <span className="text-xs font-semibold uppercase tracking-widest text-[var(--md-sys-color-on-surface-variant)] mt-0.5">
+                    {timeLeft === 0 ? "Time's Up" : 'seconds'}
+                  </span>
                 </>
               );
             })()}
@@ -229,44 +274,73 @@ export default function LiveScreen() {
             <CountdownRing timeLeft={timeLeft} totalTime={currentQuestion.timeLimitSeconds} />
           )}
           <div className="flex items-center gap-2">
-            <span className={`w-2 h-2 rounded-full ${connected ? 'bg-green-400' : 'bg-red-400'} animate-pulse`} />
-            <span className="text-xs text-white/40">{connected ? 'Live' : 'Connecting…'}</span>
+            <MdStatusDot
+              inline
+              state={connected ? 'online' : 'busy'}
+              live={connected}
+              label={connected ? 'Live' : 'Connecting'}
+              size="small"
+            />
+            <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+              {connected ? 'Live' : 'Connecting…'}
+            </span>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         {!currentQuestion ? (
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <div className="text-8xl mb-6 animate-pulse">⏳</div>
-              <h1 className="text-4xl font-bold text-white/60 mb-3">Waiting for next question</h1>
-              {activeQuizTitle && <p className="text-lg text-white/30">{activeQuizTitle}</p>}
+            <div className="text-center flex flex-col items-center gap-4">
+              <MdLoadingIndicator
+                variant="contained"
+                label="Waiting for next question"
+                style={{ '--md-loading-indicator-size': '72px' }}
+              />
+              <h1 className="text-4xl font-bold text-[var(--md-sys-color-on-surface-variant)]">
+                Waiting for next question
+              </h1>
+              {activeQuizTitle && (
+                <p className="text-lg text-[var(--md-sys-color-on-surface-variant)] opacity-70">
+                  {activeQuizTitle}
+                </p>
+              )}
             </div>
           </div>
         ) : (
           <div className="flex-1 flex gap-0 overflow-hidden">
-            {/* Left: Question */}
             <div className="flex-1 flex flex-col px-10 py-8 overflow-y-auto">
-              <div className="mb-4 flex items-center gap-3">
+              <div className="mb-4 flex items-center gap-3 flex-wrap">
                 {currentQuestion.sectionName && (
-                  <span className="text-xs font-bold text-orange-300 uppercase tracking-widest bg-orange-400/10 border border-orange-400/20 px-3 py-1 rounded-md">
-                    {currentQuestion.sectionName}
-                  </span>
+                  <MdChip
+                    variant="suggestion"
+                    appearance="filled"
+                    color="primary"
+                    label={currentQuestion.sectionName}
+                    density="-1"
+                  />
                 )}
-                <span className={`text-sm font-bold uppercase tracking-widest ${currentQuestion.type === 'CODING' ? 'text-orange-300' : 'text-orange-200/80'}`}>
-                  {currentQuestion.type === 'CODING' ? 'Coding Challenge' : currentQuestion.isMultiAnswer ? 'Select all that apply' : 'Choose one answer'}
-                </span>
+                <MdChip
+                  variant="suggestion"
+                  appearance="outlined"
+                  color={currentQuestion.type === 'CODING' ? 'primary' : undefined}
+                  label={
+                    currentQuestion.type === 'CODING'
+                      ? 'Coding Challenge'
+                      : currentQuestion.isMultiAnswer
+                        ? 'Select all that apply'
+                        : 'Choose one answer'
+                  }
+                  density="-1"
+                />
               </div>
 
               <div
-                className="text-2xl leading-relaxed text-white/90 mb-8 md-content"
+                className="leading-relaxed mb-8 md-content text-[var(--md-sys-color-on-surface)]"
                 dangerouslySetInnerHTML={{ __html: renderMd(currentQuestion.content) }}
                 style={{ fontSize: 'clamp(1.1rem, 2.5vw, 1.6rem)' }}
               />
 
-              {/* MCQ options */}
               {currentQuestion.type !== 'CODING' && currentQuestion.options?.length > 0 && (
                 <div className="grid grid-cols-1 gap-3 max-w-3xl">
                   {currentQuestion.options.map((opt, i) => {
@@ -278,32 +352,68 @@ export default function LiveScreen() {
                     return (
                       <div
                         key={opt.id}
-                        className={`relative rounded-xl border-2 p-4 overflow-hidden transition-all duration-500 ${
-                          showResults
+                        className="relative rounded-[var(--md-sys-shape-corner-large,16px)] p-4 overflow-hidden transition-all duration-500"
+                        style={{
+                          border: `2px solid ${
+                            showResults
+                              ? isCorrect
+                                ? 'var(--md-sys-color-tertiary)'
+                                : 'var(--md-sys-color-outline-variant)'
+                              : 'var(--md-sys-color-outline)'
+                          }`,
+                          background: showResults
                             ? isCorrect
-                              ? 'border-green-400 bg-green-400/10'
-                              : 'border-white/10 bg-white/5 opacity-60'
-                            : 'border-white/20 bg-white/5'
-                        }`}
+                              ? 'var(--md-sys-color-tertiary-container)'
+                              : 'var(--md-sys-color-surface-container)'
+                            : 'var(--md-sys-color-surface-container-high)',
+                          opacity: showResults && !isCorrect ? 0.7 : 1,
+                        }}
                       >
                         {showResults && (
                           <div
-                            className={`absolute inset-y-0 left-0 transition-all duration-700 ${isCorrect ? 'bg-green-400/20' : 'bg-white/5'}`}
-                            style={{ width: `${pct}%` }}
+                            className="absolute inset-y-0 left-0 transition-all duration-700"
+                            style={{
+                              width: `${pct}%`,
+                              background: isCorrect
+                                ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 25%, transparent)'
+                                : 'color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent)',
+                            }}
                           />
                         )}
                         <div className="relative flex items-center gap-4">
-                          <span className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0 ${
-                            showResults && isCorrect ? 'bg-green-400 text-black' : 'bg-white/10 text-white/60'
-                          }`}>
+                          <span
+                            className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-black flex-shrink-0"
+                            style={{
+                              background: showResults && isCorrect
+                                ? 'var(--md-sys-color-tertiary)'
+                                : 'var(--md-sys-color-surface-container-highest)',
+                              color: showResults && isCorrect
+                                ? 'var(--md-sys-color-on-tertiary)'
+                                : 'var(--md-sys-color-on-surface-variant)',
+                            }}
+                          >
                             {String.fromCharCode(65 + i)}
                           </span>
-                          <span className="text-base font-medium text-white/90 flex-1">{opt.content}</span>
+                          <span className="text-base font-medium flex-1 text-[var(--md-sys-color-on-surface)]">
+                            {opt.content}
+                          </span>
                           {showResults && (
                             <div className="flex items-center gap-2 flex-shrink-0">
-                              {isCorrect && <span className="text-green-400 font-bold text-sm">✓ Correct</span>}
-                              <span className="text-sm font-bold text-white/50">{pct}%</span>
-                              <span className="text-xs text-white/30">({resultStats?.optionStats?.[opt.id] || 0})</span>
+                              {isCorrect && (
+                                <MdChip
+                                  variant="suggestion"
+                                  appearance="filled"
+                                  color="tertiary"
+                                  label="Correct"
+                                  density="-2"
+                                />
+                              )}
+                              <span className="text-sm font-bold text-[var(--md-sys-color-on-surface-variant)]">
+                                {pct}%
+                              </span>
+                              <span className="text-xs text-[var(--md-sys-color-outline)]">
+                                ({resultStats?.optionStats?.[opt.id] || 0})
+                              </span>
                             </div>
                           )}
                         </div>
@@ -313,45 +423,75 @@ export default function LiveScreen() {
                 </div>
               )}
 
-              {/* Coding results summary */}
               {currentQuestion.type === 'CODING' && showResults && resultStats && (
                 <div className="max-w-3xl mt-4 space-y-2">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
-                      <div className="h-full bg-green-400 rounded-full transition-all duration-700"
-                        style={{ width: `${resultStats.totalAnswered > 0 ? Math.round((resultStats.solved / resultStats.totalAnswered) * 100) : 0}%` }} />
+                    <div className="flex-1">
+                      <MdProgressIndicator
+                        variant="linear"
+                        value={resultStats.totalAnswered > 0
+                          ? Math.round((resultStats.solved / resultStats.totalAnswered) * 100)
+                          : 0}
+                        max={100}
+                        label="Solved rate"
+                        thickness={6}
+                      />
                     </div>
-                    <span className="text-sm text-white/50 flex-shrink-0">{resultStats.solved}/{resultStats.totalAnswered} solved</span>
+                    <span className="text-sm flex-shrink-0 text-[var(--md-sys-color-on-surface-variant)]">
+                      {resultStats.solved}/{resultStats.totalAnswered} solved
+                    </span>
                   </div>
                 </div>
               )}
 
               {showResults && resultStats && currentQuestion.type !== 'CODING' && (
-                <div className="mt-6 text-sm text-white/40">
+                <div className="mt-6 text-sm text-[var(--md-sys-color-on-surface-variant)]">
                   {resultStats.totalAnswered} teams answered
                 </div>
               )}
             </div>
 
-            {/* Right: Submissions Panel */}
-            <div className="w-72 xl:w-80 border-l border-white/10 flex flex-col flex-shrink-0">
-              {/* Panel header */}
-              <div className="px-5 py-4 border-b border-white/10 flex-shrink-0">
-                <h3 className="text-sm font-bold text-white/60 uppercase tracking-widest">Submissions</h3>
-                <div className="flex items-center gap-3 mt-1">
-                  <span className="text-xs text-green-400 font-semibold">{submittedList.length} submitted</span>
+            <div
+              className="w-72 xl:w-80 flex flex-col flex-shrink-0"
+              style={{
+                borderLeft: '1px solid var(--md-sys-color-outline-variant)',
+                background: 'var(--md-sys-color-surface-container-low)',
+              }}
+            >
+              <div
+                className="px-5 py-4 flex-shrink-0"
+                style={{ borderBottom: '1px solid var(--md-sys-color-outline-variant)' }}
+              >
+                <h3 className="text-sm font-bold uppercase tracking-widest text-[var(--md-sys-color-on-surface-variant)]">
+                  Submissions
+                </h3>
+                <div className="flex items-center gap-3 mt-1 flex-wrap">
+                  <MdChip
+                    variant="suggestion"
+                    appearance="filled"
+                    color="tertiary"
+                    label={`${submittedList.length} submitted`}
+                    density="-2"
+                  />
                   {pendingList.length > 0 && (
-                    <span className="text-xs text-white/30">· {pendingList.length} pending</span>
+                    <span className="text-xs text-[var(--md-sys-color-on-surface-variant)]">
+                      · {pendingList.length} pending
+                    </span>
                   )}
                   {totalTeams > 0 && (
-                    <span className="text-xs text-white/20 ml-auto">{totalTeams} total</span>
+                    <span className="text-xs text-[var(--md-sys-color-outline)] ml-auto">
+                      {totalTeams} total
+                    </span>
                   )}
                 </div>
                 {totalTeams > 0 && (
-                  <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-400 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.round((submittedList.length / totalTeams) * 100)}%` }}
+                  <div className="mt-2">
+                    <MdProgressIndicator
+                      variant="linear"
+                      value={submissionPct}
+                      max={100}
+                      label="Submission progress"
+                      thickness={4}
                     />
                   </div>
                 )}
@@ -359,51 +499,91 @@ export default function LiveScreen() {
 
               <div ref={feedRef} className="flex-1 overflow-y-auto py-2">
                 {submittedList.length === 0 && pendingList.length === 0 ? (
-                  <div className="text-center py-8 text-white/20 text-sm">Waiting for answers…</div>
+                  <div className="text-center py-8 text-sm text-[var(--md-sys-color-on-surface-variant)]">
+                    Waiting for answers…
+                  </div>
                 ) : (
                   <>
-                    {/* Submitted teams */}
-                    {submittedList.map((team, i) => {
+                    {submittedList.map((team) => {
                       const isCorrect = submissionsMapRef.current[team.id];
                       const answer = fastestAnswers.find(a => a.teamName === team.name);
                       const isCoding = currentQuestion?.type === 'CODING';
                       return (
                         <div
                           key={team.id}
-                          className={`flex items-center gap-3 mx-3 px-3 py-2 rounded-lg mb-1.5 transition-all ${
-                            isCorrect ? 'bg-green-500/15 border border-green-500/20' : 'bg-white/5 border border-white/5'
-                          }`}
-                          style={{ animation: 'slideIn 0.3s ease-out' }}
+                          className="flex items-center gap-3 mx-3 px-3 py-2 rounded-lg mb-1.5 transition-all"
+                          style={{
+                            animation: 'slideIn 0.3s ease-out',
+                            background: isCorrect
+                              ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 18%, transparent)'
+                              : 'var(--md-sys-color-surface-container)',
+                            border: `1px solid ${
+                              isCorrect
+                                ? 'color-mix(in srgb, var(--md-sys-color-tertiary) 35%, transparent)'
+                                : 'var(--md-sys-color-outline-variant)'
+                            }`,
+                          }}
                         >
-                          {answer ? <RankBadge rank={answer.rank} /> : <span className="w-8 text-center text-white/20 text-sm">—</span>}
-                          <p className="text-sm font-semibold text-white flex-1 truncate">{team.name}</p>
+                          {answer ? <RankBadge rank={answer.rank} /> : (
+                            <span className="w-8 text-center text-sm text-[var(--md-sys-color-outline)]">—</span>
+                          )}
+                          <p className="text-sm font-semibold flex-1 truncate text-[var(--md-sys-color-on-surface)]">
+                            {team.name}
+                          </p>
                           {isCoding && answer?.testsTotal > 0 ? (
-                            <span className={`text-xs font-bold flex-shrink-0 ${isCorrect ? 'text-green-400' : 'text-white/40'}`}>
+                            <span
+                              className="text-xs font-bold flex-shrink-0"
+                              style={{
+                                color: isCorrect
+                                  ? 'var(--md-sys-color-tertiary)'
+                                  : 'var(--md-sys-color-on-surface-variant)',
+                              }}
+                            >
                               {answer.testsPassed}/{answer.testsTotal}
                             </span>
                           ) : (
-                            <span className={`text-base flex-shrink-0 ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
-                              {isCorrect ? '✓' : '✗'}
+                            <span
+                              className="material-symbols-outlined text-base flex-shrink-0"
+                              style={{
+                                color: isCorrect
+                                  ? 'var(--md-sys-color-tertiary)'
+                                  : 'var(--md-sys-color-error)',
+                              }}
+                            >
+                              {isCorrect ? 'check_circle' : 'cancel'}
                             </span>
                           )}
                         </div>
                       );
                     })}
 
-                    {/* Pending teams */}
                     {pendingList.length > 0 && (
                       <>
                         {submittedList.length > 0 && (
-                          <div className="mx-3 my-2 border-t border-white/5" />
+                          <div
+                            className="mx-3 my-2"
+                            style={{ borderTop: '1px solid var(--md-sys-color-outline-variant)' }}
+                          />
                         )}
                         {pendingList.map(team => (
                           <div
                             key={team.id}
-                            className="flex items-center gap-3 mx-3 px-3 py-2 rounded-lg mb-1.5 bg-white/3 border border-white/5 opacity-50"
+                            className="flex items-center gap-3 mx-3 px-3 py-2 rounded-lg mb-1.5 opacity-50"
+                            style={{
+                              background: 'var(--md-sys-color-surface-container)',
+                              border: '1px solid var(--md-sys-color-outline-variant)',
+                            }}
                           >
-                            <span className="w-8 text-center text-white/20 text-sm">…</span>
-                            <p className="text-sm text-white/50 flex-1 truncate">{team.name}</p>
-                            <span className="text-xs text-white/20">pending</span>
+                            <span className="w-8 text-center text-sm text-[var(--md-sys-color-outline)]">…</span>
+                            <p className="text-sm flex-1 truncate text-[var(--md-sys-color-on-surface-variant)]">
+                              {team.name}
+                            </p>
+                            <MdChip
+                              variant="suggestion"
+                              appearance="outlined"
+                              label="pending"
+                              density="-2"
+                            />
                           </div>
                         ))}
                       </>
@@ -424,8 +604,18 @@ export default function LiveScreen() {
         .md-content h1, .md-content h2, .md-content h3 { font-weight: bold; margin: 0.5em 0; }
         .md-content h1 { font-size: 1.5em; }
         .md-content h2 { font-size: 1.25em; }
-        .md-content code { background: rgba(255,255,255,0.1); padding: 0.1em 0.4em; border-radius: 4px; font-family: monospace; }
-        .md-content pre { background: rgba(255,255,255,0.05); padding: 1em; border-radius: 8px; overflow-x: auto; }
+        .md-content code {
+          background: var(--md-sys-color-surface-container-highest);
+          padding: 0.1em 0.4em;
+          border-radius: 4px;
+          font-family: monospace;
+        }
+        .md-content pre {
+          background: var(--md-sys-color-surface-container);
+          padding: 1em;
+          border-radius: 8px;
+          overflow-x: auto;
+        }
         .md-content p { margin: 0.3em 0; }
         .md-content li { margin-left: 1.5em; list-style: disc; }
         .md-content strong { font-weight: bold; }

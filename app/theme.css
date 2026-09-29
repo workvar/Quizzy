@@ -1,0 +1,89 @@
+/*!
+ * AWC UI — Material Design 3 theme for Quizzy
+ * Seed primary: #F26207 (Quizzy brand orange)
+ * Surfaces hand-tuned to cool neutrals (avoid warm cream + terracotta clustering).
+ */
+
+:root {
+  --md-sys-color-primary: #C44D00;
+  --md-sys-color-on-primary: #FFFFFF;
+  --md-sys-color-primary-container: #FFDBCD;
+  --md-sys-color-on-primary-container: #3E1400;
+  --md-sys-color-inverse-primary: #FFB596;
+  --md-sys-color-secondary: #5C6370;
+  --md-sys-color-on-secondary: #FFFFFF;
+  --md-sys-color-secondary-container: #E6E8EC;
+  --md-sys-color-on-secondary-container: #191B1F;
+  --md-sys-color-tertiary: #006B5E;
+  --md-sys-color-on-tertiary: #FFFFFF;
+  --md-sys-color-tertiary-container: #A0F2E2;
+  --md-sys-color-on-tertiary-container: #00201B;
+  --md-sys-color-error: #BA1A1A;
+  --md-sys-color-on-error: #FFFFFF;
+  --md-sys-color-error-container: #FFDAD6;
+  --md-sys-color-on-error-container: #410002;
+  --md-sys-color-background: #F5F6F8;
+  --md-sys-color-on-background: #191B1F;
+  --md-sys-color-surface: #F5F6F8;
+  --md-sys-color-on-surface: #191B1F;
+  --md-sys-color-surface-variant: #E3E5E9;
+  --md-sys-color-on-surface-variant: #5C6370;
+  --md-sys-color-surface-container-lowest: #FFFFFF;
+  --md-sys-color-surface-container-low: #EFF1F4;
+  --md-sys-color-surface-container: #E9EBEE;
+  --md-sys-color-surface-container-high: #E3E5E9;
+  --md-sys-color-surface-container-highest: #DDDFE3;
+  --md-sys-color-surface-dim: #D5D8DE;
+  --md-sys-color-surface-bright: #F5F6F8;
+  --md-sys-color-outline: #8B93A1;
+  --md-sys-color-outline-variant: #D5D8DE;
+  --md-sys-color-inverse-surface: #2E3138;
+  --md-sys-color-inverse-on-surface: #F0F2F5;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-surface-tint: #C44D00;
+
+  --md-sys-typescale-font-family: var(--font-body), 'Roboto', system-ui, sans-serif;
+  --md-ref-typeface-brand: var(--font-display), var(--font-body), system-ui, sans-serif;
+  --md-ref-typeface-plain: var(--font-body), 'Roboto', system-ui, sans-serif;
+}
+
+[data-theme="dark"] {
+  --md-sys-color-primary: #FFB596;
+  --md-sys-color-on-primary: #581E00;
+  --md-sys-color-primary-container: #8C3700;
+  --md-sys-color-on-primary-container: #FFDBCD;
+  --md-sys-color-inverse-primary: #C44D00;
+  --md-sys-color-secondary: #C4C9D1;
+  --md-sys-color-on-secondary: #2E3138;
+  --md-sys-color-secondary-container: #454A54;
+  --md-sys-color-on-secondary-container: #E6E8EC;
+  --md-sys-color-tertiary: #84D5C6;
+  --md-sys-color-on-tertiary: #003730;
+  --md-sys-color-tertiary-container: #005047;
+  --md-sys-color-on-tertiary-container: #A0F2E2;
+  --md-sys-color-error: #FFB4AB;
+  --md-sys-color-on-error: #690005;
+  --md-sys-color-error-container: #93000A;
+  --md-sys-color-on-error-container: #FFDAD6;
+  --md-sys-color-background: #121418;
+  --md-sys-color-on-background: #E6E8EC;
+  --md-sys-color-surface: #121418;
+  --md-sys-color-on-surface: #E6E8EC;
+  --md-sys-color-surface-variant: #454A54;
+  --md-sys-color-on-surface-variant: #C4C9D1;
+  --md-sys-color-surface-container-lowest: #0C0E12;
+  --md-sys-color-surface-container-low: #1A1C22;
+  --md-sys-color-surface-container: #1E2128;
+  --md-sys-color-surface-container-high: #282B33;
+  --md-sys-color-surface-container-highest: #33363F;
+  --md-sys-color-surface-dim: #121418;
+  --md-sys-color-surface-bright: #383B44;
+  --md-sys-color-outline: #8B93A1;
+  --md-sys-color-outline-variant: #454A54;
+  --md-sys-color-inverse-surface: #E6E8EC;
+  --md-sys-color-inverse-on-surface: #2E3138;
+  --md-sys-color-shadow: #000000;
+  --md-sys-color-scrim: #000000;
+  --md-sys-color-surface-tint: #FFB596;
+}

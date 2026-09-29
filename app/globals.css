@@ -6,8 +6,8 @@
   --brand-orange: #F26207;
   --brand-orange-soft: #FF8A4C;
   --brand-ink: #191B1F;
-  --brand-surface: #F4F5F7;
-  --brand-line: #E6E8EC;
+  --brand-surface: var(--md-sys-color-surface, #F5F6F8);
+  --brand-line: var(--md-sys-color-outline-variant, #D5D8DE);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -15,14 +15,40 @@
 html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
-  font-family: var(--font-body), system-ui, sans-serif;
-  background-color: var(--brand-surface);
-  color: var(--brand-ink);
+  font-family: var(--font-body), var(--md-sys-typescale-font-family), system-ui, sans-serif;
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
   min-height: 100vh;
 }
 
 .font-display {
   font-family: var(--font-display), var(--font-body), system-ui, sans-serif;
+}
+
+/* App shell helpers using MD3 tokens */
+.qz-surface {
+  background: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+}
+
+.qz-surface-container {
+  background: var(--md-sys-color-surface-container-lowest);
+  color: var(--md-sys-color-on-surface);
+}
+
+.qz-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 420px at 8% -8%, color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent), transparent 55%),
+    radial-gradient(700px 380px at 96% 4%, color-mix(in srgb, var(--md-sys-color-tertiary) 12%, transparent), transparent 50%),
+    var(--md-sys-color-surface);
+}
+
+.qz-page-dark {
+  min-height: 100vh;
+  background:
+    radial-gradient(800px 400px at 12% -10%, color-mix(in srgb, var(--md-sys-color-primary) 22%, transparent), transparent 55%),
+    var(--md-sys-color-surface);
 }
 
 /* Markdown content */
@@ -31,48 +57,59 @@ body {
 .md-content h2 { font-size: 1.25rem; }
 .md-content h3 { font-size: 1.1rem; }
 .md-content p { margin-bottom: 10px; line-height: 1.65; }
-.md-content code { background: #F4F5F7; border: 1px solid #E6E8EC; border-radius: 5px; padding: 2px 6px; font-size: 0.875em; font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; color: var(--brand-orange); }
-.md-content pre { background: #191B1F; border-radius: 10px; padding: 16px; overflow-x: auto; margin: 12px 0; }
-.md-content pre code { background: none; border: none; color: #E6E8EC; padding: 0; }
+.md-content code { background: var(--md-sys-color-surface-container); border: 1px solid var(--md-sys-color-outline-variant); border-radius: 5px; padding: 2px 6px; font-size: 0.875em; font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace; color: var(--md-sys-color-primary); }
+.md-content pre { background: var(--md-sys-color-inverse-surface); border-radius: 12px; padding: 16px; overflow-x: auto; margin: 12px 0; }
+.md-content pre code { background: none; border: none; color: var(--md-sys-color-inverse-on-surface); padding: 0; }
 .md-content ul,.md-content ol { margin: 6px 0 10px 20px; }
 .md-content li { margin-bottom: 4px; }
 .md-content strong { font-weight: 700; }
-.md-content blockquote { border-left: 3px solid var(--brand-orange); padding: 8px 14px; background: #FFF4EC; border-radius: 0 8px 8px 0; color: #5C6370; margin: 10px 0; }
+.md-content blockquote { border-left: 3px solid var(--md-sys-color-primary); padding: 8px 14px; background: var(--md-sys-color-primary-container); border-radius: 0 8px 8px 0; color: var(--md-sys-color-on-primary-container); margin: 10px 0; }
 .md-content table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 0.9rem; }
-.md-content table th,.md-content table td { border: 1px solid #E6E8EC; padding: 7px 12px; }
-.md-content table th { background: #F4F5F7; font-weight: 600; }
+.md-content table th,.md-content table td { border: 1px solid var(--md-sys-color-outline-variant); padding: 7px 12px; }
+.md-content table th { background: var(--md-sys-color-surface-container); font-weight: 600; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #D5D8DE; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--md-sys-color-outline-variant); border-radius: 3px; }
 
 /* Transitions */
-.card-hover { transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease; }
-.card-hover:hover { box-shadow: 0 8px 24px rgba(25,27,31,0.08), 0 2px 6px rgba(25,27,31,0.04); transform: translateY(-1px); border-color: rgba(242,98,7,0.25); }
+.card-hover { transition: box-shadow 0.18s ease, transform 0.18s ease; }
+.card-hover:hover { transform: translateY(-1px); }
 
 /* SSE notification slide */
 @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .notify-in { animation: slideDown 0.3s ease; }
 
-/* App dialog / searchable select */
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes dialogIn {
   from { opacity: 0; transform: translateY(8px) scale(0.98); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-/* Login mesh accents */
-.brand-orb {
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(48px);
-  pointer-events: none;
-  opacity: 0.55;
+@keyframes brandFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
+
+@keyframes brandFadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-brand-float { animation: brandFloat 5s ease-in-out infinite; }
+.animate-brand-fade-up { animation: brandFadeUp 0.55s ease both; }
 
 @media (prefers-reduced-motion: reduce) {
   .notify-in,
   .animate-brand-float,
   .animate-brand-fade-up { animation: none !important; }
+}
+
+/* Keep legacy Tailwind apple/brand utilities usable during migration */
+.bg-brand-mesh {
+  background:
+    radial-gradient(1200px 600px at 10% -10%, color-mix(in srgb, var(--md-sys-color-primary) 20%, transparent), transparent 55%),
+    radial-gradient(900px 500px at 90% 10%, color-mix(in srgb, var(--md-sys-color-tertiary) 14%, transparent), transparent 50%),
+    var(--md-sys-color-surface);
 }

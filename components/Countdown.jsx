@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { MdChip } from '@awc-ui/react';
 
 export default function Countdown({ endTime }) {
   const [display, setDisplay] = useState('');
@@ -20,10 +21,12 @@ export default function Countdown({ endTime }) {
   }, [endTime]);
 
   return (
-    <span className={`font-mono text-sm font-semibold px-3 py-1 rounded-full ${
-      expired ? 'bg-red-100 text-apple-red' : 'bg-blue-50 text-apple-blue'
-    }`}>
-      {display || '--:--:--'}
-    </span>
+    <MdChip
+      variant="suggestion"
+      appearance="filled"
+      color={expired ? 'error' : 'primary'}
+      label={display || '--:--:--'}
+      density="-1"
+    />
   );
 }
